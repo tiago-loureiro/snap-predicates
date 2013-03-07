@@ -1,142 +1,107 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, TupleSections #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, GADTs #-}
 module Snap.Predicates
   ( Predicate (..)
-  , Routes
-  , showRoutes
-  , expandRoutes
-  , get
-  , post
-  , put
-  , delete
+  , Result (..)
+  , Anything (..)
+  , Accept (..)
+  , AnyParamOf (..)
+  , AnyHeaderOf (..)
+  , (:&:) (..)
+  , (:|:) (..)
+  , eval
   )
 where
 
 import Control.Applicative
-import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Monoid
 import Data.String
 import Data.Word
-import Monad.Helpers
 import Snap.Core
-import Control.Monad.Trans.State.Strict (State)
-import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.CaseInsensitive as CI
-import qualified Data.List as L
 import qualified Data.Map.Strict as M
 
-data Route m = Route
-  { _method  :: !Method
-  , _path    :: !ByteString
-  , _pred    :: !Predicate
-  , _handler :: m ()
-  }
-
-newtype Routes m a = Routes
-  { _unroutes :: State [Route m] a }
-
-instance Monad (Routes m) where
-    return  = Routes . return
-    m >>= f = Routes $ _unroutes m >>= _unroutes . f
-
-addRoute :: MonadSnap m => Method -> ByteString -> m () -> Predicate -> Routes m ()
-addRoute m r x p = Routes $ State.modify ((Route m r p x):)
-
-get, post, put, delete :: MonadSnap m => ByteString -> m () -> Predicate -> Routes m ()
-get    = addRoute GET
-post   = addRoute POST
-put    = addRoute PUT
-delete = addRoute DELETE
-
-showRoutes :: Routes m () -> [ByteString]
-showRoutes (Routes routes) =
-    let rs = reverse $ State.execState routes []
-    in flip map rs $ \x ->
-        show' (_method x) <> " " <> show' (_path x) <> " " <> show' (_pred x)
-  where
-    show' :: Show a => a -> ByteString
-    show' = fromString . show
-
-expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
-expandRoutes (Routes routes) =
-    let rg = grouped . sorted . reverse $ State.execState routes []
-    in map (\g -> (_path (head g), select g)) rg
-  where
-    sorted :: [Route m] -> [Route m]
-    sorted = L.sortBy (\a b -> _path a `compare` _path b)
-
-    grouped :: [Route m] -> [[Route m]]
-    grouped = L.groupBy (\a b -> _path a == _path b)
-
-select :: MonadSnap m => [Route m] -> m ()
-select g = do
-    ms <- filterM byMethod g
-    if L.null ms
-        then respond (Bad 405 Nothing)
-        else evalPreds ms
-  where
-    byMethod :: MonadSnap m => Route m -> m Bool
-    byMethod x = (_method x ==) <$> getsRequest rqMethod
-
-    evalPreds :: MonadSnap m => [Route m] -> m ()
-    evalPreds rs = do
-        es <- forM rs $ \r -> (, _handler r) <$> eval (_pred r)
-        case L.find ((== Good) . fst) es of
-            Just (_, h) -> h
-            Nothing     -> respond (fst . head $ es)
-
-respond :: MonadSnap m => Result -> m ()
-respond (Bad i msg) = do
-    putResponse . clearContentLength
-                . setResponseCode (fromIntegral i)
-                $ emptyResponse
-    maybe (return ()) writeBS msg
-respond Good = return ()
-
--- Predicates
-
+-- | The result of some predicate evaluation,
+-- either 'Good' or 'Bad' where the latter includes some
+-- status code plus optional message.
 data Result =
     Good
   | Bad !Word !(Maybe ByteString)
   deriving (Eq, Show)
 
-data Predicate =
-    Accept ByteString
-  | AnyParamOf [ByteString]
-  | AnyHeaderOf [ByteString]
-  | Predicate :&: Predicate
-  | Predicate :|: Predicate
-  deriving (Eq, Show)
+-- | The predicate type-class contains the abstract
+-- interface to evaluate a predicate against some
+-- 'Request' and the ability to turn a predicate
+-- into a string representation.
+class Predicate a where
+    apply :: a -> Request -> Result
+    toStr :: a -> ByteString
 
-eval :: MonadSnap m => Predicate -> m Result
-eval (Accept x) =
-    unlessM (elem x <$> headers' "accept") $
-        Bad 406 (Just "Expected 'Accept: accept/json'.")
+-- | A 'Predicate' instance which is always 'Good'.
+data Anything = Anything
 
-eval (AnyParamOf xs) =
-    whenM (null . concat <$> mapM params' xs) $
-        Bad 400 (Just ("Expected any of " <> (fromString . show $ xs) <> "."))
+-- | The logical OR connective of two 'Predicate's.
+data a :|: b where
+    (:|:) :: (Predicate a, Predicate b) => a -> b -> a :|: b
 
-eval (AnyHeaderOf xs) =
-    whenM (null . concat <$> mapM headers' xs) $
-        Bad 400 (Just ("Expected any of " <> (fromString . show $ xs) <> "."))
+-- | The logical AND connective of two 'Predicate's.
+data a :&: b where
+    (:&:) :: (Predicate a, Predicate b) => a -> b -> a :&: b
 
-eval (x :&: y) = eval x >>= \b ->
-    case b of
-        Good -> eval y
-        bad  -> return bad
+instance Predicate Anything where
+    apply Anything _ = Good
+    toStr Anything   = "Anything"
 
-eval (x :|: y) = eval x >>= \b ->
-    case b of
-        Good -> return Good
-        _    -> eval y
+instance Predicate (a :|: b) where
+    apply (a :|: b) r =
+        case apply a r of
+            Good -> Good
+            _    -> apply b r
+    toStr (a :|: b) = toStr a <> " | " <> toStr b
 
-whenM, unlessM :: (Monad m, Functor m) => m Bool -> Result -> m Result
-whenM   t x = ifM t x Good
-unlessM t x = ifM t Good x
+instance Predicate (a :&: b) where
+    apply (a :&: b) r =
+        case apply a r of
+            Good -> apply b r
+            bad  -> bad
+    toStr (a :&: b) = toStr a <> " & " <> toStr b
 
-headers' :: MonadSnap m => ByteString -> m [ByteString]
-headers' name = maybe [] id . getHeaders (CI.mk name) <$> getRequest
+-- | A 'Predicate' against the 'Request's "Accept" header.
+data Accept      = Accept ByteString
+                 --
+-- | A 'Predicate' which tests if any of the given
+-- names denote a 'Request' parameter.
+data AnyParamOf  = AnyParamOf [ByteString]
 
-params' :: MonadSnap m => ByteString -> m [ByteString]
-params' name = maybe [] id . M.lookup name <$> getsRequest rqParams
+-- | A 'Predicate' which tests if any of the given
+-- names denote a 'Request' header name.
+data AnyHeaderOf = AnyHeaderOf [ByteString]
+
+instance Predicate Accept where
+    apply (Accept x) r =
+        if x `elem` headers' r "accept"
+            then Good
+            else Bad 406 (Just "Expected 'Accept: accept/json'.")
+    toStr (Accept x) = "Accept: " <> show' x
+
+instance Predicate AnyParamOf where
+    apply (AnyParamOf xs) r =
+        if null . concat $ map (params' r) xs
+            then Bad 400 (Just ("Expected any of " <> show' xs <> "."))
+            else Good
+    toStr (AnyParamOf xs) = "AnyParamOf: " <> show' xs
+
+-- | Evaluates a 'Predicate' against the Snap 'Request'.
+eval :: (MonadSnap m, Predicate p) => p -> m Result
+eval p = apply p <$> getRequest
+
+-- Internal helpers:
+
+headers' :: Request -> ByteString -> [ByteString]
+headers' rq name = maybe [] id . getHeaders (CI.mk name) $ rq
+
+params' :: Request -> ByteString -> [ByteString]
+params' rq name = maybe [] id . M.lookup name . rqParams $ rq
+
+show' :: Show a => a -> ByteString
+show' = fromString . show

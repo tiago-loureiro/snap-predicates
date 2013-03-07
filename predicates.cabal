@@ -18,8 +18,7 @@ description:
 
 library
     hs-source-dirs:  src
-    exposed-modules: Snap.Predicates
-    other-modules:   Monad.Helpers
+    exposed-modules: Snap.Predicates, Snap.Routes
 
     build-depends:
         base             >= 4   && < 5
