@@ -1,0 +1,10 @@
+*.swp
+*.swo
+*.hi
+*.o
+*.out
+*.prof
+dist/
+log/
+tags
+ID

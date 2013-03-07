@@ -1,0 +1,44 @@
+name:                snap-predicates
+version:             0.1.0
+synopsis:            Predicates for route definitions.
+license:             MIT
+license-file:        LICENSE
+author:              Cf. AUTHORS
+maintainer:          Cf. AUTHORS
+copyright:           Copyright (c) 2013 snap-predicate authors
+stability:           experimental
+category:            Snap
+build-type:          Simple
+cabal-version:       >= 1.8
+extra-source-files:  README.md
+                   , AUTHORS
+
+description:
+    Provide a small DSL to express predicates on Snap route definitions.
+
+library
+    hs-source-dirs:  src
+    exposed-modules: Snap.Predicates
+    other-modules:   Monad.Helpers
+
+    build-depends:
+        base             >= 4   && < 5
+      , transformers     >= 0.3
+      , bytestring       >= 0.9
+      , containers       >= 0.5
+      , case-insensitive >= 1.0
+      , snap-core        >= 0.9
+      , snap-server      >= 0.9
+
+    ghc-options:
+        -Wall
+        -O2
+        -threaded
+        -rtsopts
+        -fwarn-tabs
+        -funbox-strict-fields
+        -fno-warn-unused-do-bind
+
+source-repository head
+    type:             git
+    location:         https://github.com/twittner/snap-predicates
