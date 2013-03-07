@@ -50,7 +50,7 @@ data MyParamCheck = MyParamCheck ByteString
 
 instance Predicate MyParamCheck where
     apply (MyParamCheck x) r =
-        maybe (Bad 200 (Just $ "Expecting: " <> x)) (const Good) canRead
+        maybe (Bad 400 (Just $ "Expecting: " <> x)) (const Good) canRead
       where
         canRead :: Maybe ()
         canRead = do
