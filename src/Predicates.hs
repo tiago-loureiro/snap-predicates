@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -13,7 +12,7 @@ import Data.ByteString (ByteString)
 import Data.Word
 
 data Result a =
-    Yes a
+    Yes !a
   | No !Word !(Maybe ByteString)
   deriving (Eq, Show)
 
@@ -25,7 +24,7 @@ instance Monad Result where
 instance MonadPlus Result where
     mzero = No 0 Nothing
     (No _ _) `mplus` y = y
-    x         `mplus` _ = x
+    x        `mplus` _ = x
 
 instance Functor Result where
     fmap = liftM
@@ -63,8 +62,7 @@ instance Show False where
     show False = "False"
 
 -- | The logical NOT connective of a 'Predicate'.
-data Not a where
-    Not :: a -> Not a
+data Not a = Not a
 
 instance Predicate a x => Predicate (Not a) x where
     type Value (Not a) = ()
@@ -77,8 +75,7 @@ instance Show a => Show (Not a) where
     show (Not a) = "(not " ++ show a ++ ")"
 
 -- | The logical OR connective of two 'Predicate's.
-data a :|: b where
-    (:|:) :: a -> b -> a :|: b
+data a :|: b = a :|: b
 
 instance (Predicate a x, Predicate b x) => Predicate (a :|: b) x where
     type Value (a :|: b) = Either (Value a) (Value b)
@@ -88,8 +85,7 @@ instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
 
 -- | The logical AND connective of two 'Predicate's.
-data a :&: b where
-    (:&:) :: a -> b -> a :&: b
+data a :&: b = a :&: b
 
 instance (Predicate a x, Predicate b x) => Predicate (a :&: b) x where
     type Value (a :&: b) = (Value a, Value b)
