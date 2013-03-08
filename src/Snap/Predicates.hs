@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, GADTs, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, GADTs, TypeFamilies #-}
 module Snap.Predicates
   ( Predicate (..)
   , Result (..)
@@ -32,8 +32,9 @@ data Result a =
 -- interface to evaluate a predicate against some
 -- 'Request' and the ability to turn a predicate
 -- into a string representation.
-class Predicate a b | a -> b where
-    apply :: a -> Request -> Result b
+class Predicate a where
+    type Value a
+    apply :: a -> Request -> Result (Value a)
     toStr :: a -> ByteString
 
 -- | A 'Predicate' instance which is always 'Good'.
@@ -41,17 +42,19 @@ data Anything = Anything
 
 -- | The logical OR connective of two 'Predicate's.
 data a :|: b where
-    (:|:) :: a -> b -> a :|: b
+    (:|:) :: (Predicate a, Predicate b) => a -> b -> a :|: b
 
 -- | The logical AND connective of two 'Predicate's.
 data a :&: b where
-    (:&:) :: a -> b -> a :&: b
+    (:&:) :: (Predicate a, Predicate b) => a -> b -> a :&: b
 
-instance Predicate Anything () where
-    apply Anything _  = Good ()
-    toStr Anything    = "Anything"
+instance Predicate Anything where
+    type Value Anything = ()
+    apply Anything _ = Good ()
+    toStr Anything   = "Anything"
 
-instance (Predicate a x, Predicate b y) => Predicate (a :|: b) (Either x y) where
+instance Predicate (a :|: b) where
+    type Value (a :|: b) = Either (Value a) (Value b)
     apply (a :|: b) r =
         case apply a r of
             Good x -> Good (Left x)
@@ -60,7 +63,8 @@ instance (Predicate a x, Predicate b y) => Predicate (a :|: b) (Either x y) wher
                           Bad i m -> Bad i m
     toStr (a :|: b) = toStr a <> " | " <> toStr b
 
-instance (Predicate a x, Predicate b y) => Predicate (a :&: b) (x, y) where
+instance Predicate (a :&: b) where
+    type Value (a :&: b) = (Value a, Value b)
     apply (a :&: b) r =
         case apply a r of
             Good x  -> case apply b r of
@@ -75,14 +79,16 @@ data Accept = Accept ByteString
 -- | A 'Predicate' looking for some parameter value.
 data Param  = Param ByteString
 
-instance Predicate Accept () where
+instance Predicate Accept where
+    type Value Accept = ()
     apply (Accept x) r =
         if x `elem` headers' r "accept"
             then Good ()
             else Bad 406 (Just "Expected 'Accept: accept/json'.")
     toStr (Accept x) = "Accept: " <> show' x
 
-instance Predicate Param ByteString where
+instance Predicate Param where
+    type Value Param = ByteString
     apply (Param x) r =
         case params' r x of
             []    -> Bad 400 (Just ("Expected parameter " <> show' x <> "."))
@@ -90,7 +96,7 @@ instance Predicate Param ByteString where
     toStr (Param x) = "Param: " <> show' x
 
 -- | Evaluates a 'Predicate' against the Snap 'Request'.
-eval :: (MonadSnap m, Predicate p x) => p -> m (Result x)
+eval :: (MonadSnap m, Predicate p) => p -> m (Result (Value p))
 eval p = apply p <$> getRequest
 
 -- Internal helpers:

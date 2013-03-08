@@ -22,7 +22,7 @@ import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 
 data Pred where
-    Pred :: Predicate p x => p -> Pred
+    Pred :: Predicate p => p -> Pred
 
 data Route m = Route
   { _method  :: !Method
@@ -42,7 +42,7 @@ instance Monad (Routes m) where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
-addRoute :: (MonadSnap m, Predicate p x)
+addRoute :: (MonadSnap m, Predicate p)
          => Method
          -> ByteString -- path
          -> m ()       -- handler
@@ -51,7 +51,7 @@ addRoute :: (MonadSnap m, Predicate p x)
 addRoute m r x p = Routes $ State.modify ((Route m r (Pred p) x):)
 
 -- | Add a route with 'Method' 'GET'
-get :: (MonadSnap m, Predicate p x)
+get :: (MonadSnap m, Predicate p)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -59,7 +59,7 @@ get :: (MonadSnap m, Predicate p x)
 get = addRoute GET
 
 -- | Add a route with 'Method' 'POST'
-post :: (MonadSnap m, Predicate p x)
+post :: (MonadSnap m, Predicate p)
      => ByteString -- ^ path
      -> m ()       -- ^ handler
      -> p          -- ^ 'Predicate'
@@ -67,7 +67,7 @@ post :: (MonadSnap m, Predicate p x)
 post = addRoute POST
 
 -- | Add a route with 'Method' 'PUT'
-put :: (MonadSnap m, Predicate p x)
+put :: (MonadSnap m, Predicate p)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -75,7 +75,7 @@ put :: (MonadSnap m, Predicate p x)
 put = addRoute PUT
 
 -- | Add a route with 'Method' 'DELETE'
-delete :: (MonadSnap m, Predicate p x)
+delete :: (MonadSnap m, Predicate p)
        => ByteString -- ^ path
        -> m ()       -- ^ handler
        -> p          -- ^ 'Predicate'
@@ -135,7 +135,7 @@ select g = do
     isGood (Good _) = True
     isGood _        = False
 
-respond :: MonadSnap m => Result x -> m ()
+respond :: MonadSnap m => Result a -> m ()
 respond (Bad i msg) = do
     putResponse . clearContentLength
                 . setResponseCode (fromIntegral i)
