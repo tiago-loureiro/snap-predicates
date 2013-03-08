@@ -22,7 +22,7 @@ import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 
 data Pred where
-    Pred :: Predicate p => p -> Pred
+    Pred :: Predicate p x => p -> Pred
 
 data Route m = Route
   { _method  :: !Method
@@ -42,7 +42,7 @@ instance Monad (Routes m) where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
-addRoute :: (MonadSnap m, Predicate p)
+addRoute :: (MonadSnap m, Predicate p x)
          => Method
          -> ByteString -- path
          -> m ()       -- handler
@@ -51,7 +51,7 @@ addRoute :: (MonadSnap m, Predicate p)
 addRoute m r x p = Routes $ State.modify ((Route m r (Pred p) x):)
 
 -- | Add a route with 'Method' 'GET'
-get :: (MonadSnap m, Predicate p)
+get :: (MonadSnap m, Predicate p x)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -59,7 +59,7 @@ get :: (MonadSnap m, Predicate p)
 get = addRoute GET
 
 -- | Add a route with 'Method' 'POST'
-post :: (MonadSnap m, Predicate p)
+post :: (MonadSnap m, Predicate p x)
      => ByteString -- ^ path
      -> m ()       -- ^ handler
      -> p          -- ^ 'Predicate'
@@ -67,7 +67,7 @@ post :: (MonadSnap m, Predicate p)
 post = addRoute POST
 
 -- | Add a route with 'Method' 'PUT'
-put :: (MonadSnap m, Predicate p)
+put :: (MonadSnap m, Predicate p x)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -75,7 +75,7 @@ put :: (MonadSnap m, Predicate p)
 put = addRoute PUT
 
 -- | Add a route with 'Method' 'DELETE'
-delete :: (MonadSnap m, Predicate p)
+delete :: (MonadSnap m, Predicate p x)
        => ByteString -- ^ path
        -> m ()       -- ^ handler
        -> p          -- ^ 'Predicate'
@@ -127,14 +127,18 @@ select g = do
     evalPreds rs = do
         es <- forM rs $ \r ->
             case _pred r of Pred p -> (, _handler r) <$> eval p
-        case L.find ((== Good) . fst) es of
+        case L.find (isGood . fst) es of
             Just (_, h) -> h
             Nothing     -> respond (fst . head $ es)
 
-respond :: MonadSnap m => Result -> m ()
+    isGood :: Result a -> Bool
+    isGood (Good _) = True
+    isGood _        = False
+
+respond :: MonadSnap m => Result x -> m ()
 respond (Bad i msg) = do
     putResponse . clearContentLength
                 . setResponseCode (fromIntegral i)
                 $ emptyResponse
     maybe (return ()) writeBS msg
-respond Good = return ()
+respond _ = return ()

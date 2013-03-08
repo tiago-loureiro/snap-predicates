@@ -1,11 +1,10 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, GADTs #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, GADTs, MultiParamTypeClasses, FunctionalDependencies, UndecidableInstances #-}
 module Snap.Predicates
   ( Predicate (..)
   , Result (..)
   , Anything (..)
   , Accept (..)
-  , AnyParamOf (..)
-  , AnyHeaderOf (..)
+  , Param (..)
   , (:&:) (..)
   , (:|:) (..)
   , eval
@@ -24,8 +23,8 @@ import qualified Data.Map.Strict as M
 -- | The result of some predicate evaluation,
 -- either 'Good' or 'Bad' where the latter includes some
 -- status code plus optional message.
-data Result =
-    Good
+data Result a =
+    Good a
   | Bad !Word !(Maybe ByteString)
   deriving (Eq, Show)
 
@@ -33,8 +32,8 @@ data Result =
 -- interface to evaluate a predicate against some
 -- 'Request' and the ability to turn a predicate
 -- into a string representation.
-class Predicate a where
-    apply :: a -> Request -> Result
+class Predicate a b | a -> b where
+    apply :: a -> Request -> Result b
     toStr :: a -> ByteString
 
 -- | A 'Predicate' instance which is always 'Good'.
@@ -42,64 +41,56 @@ data Anything = Anything
 
 -- | The logical OR connective of two 'Predicate's.
 data a :|: b where
-    (:|:) :: (Predicate a, Predicate b) => a -> b -> a :|: b
+    (:|:) :: a -> b -> a :|: b
 
 -- | The logical AND connective of two 'Predicate's.
 data a :&: b where
-    (:&:) :: (Predicate a, Predicate b) => a -> b -> a :&: b
+    (:&:) :: a -> b -> a :&: b
 
-instance Predicate Anything where
-    apply Anything _ = Good
-    toStr Anything   = "Anything"
+instance Predicate Anything () where
+    apply Anything _  = Good ()
+    toStr Anything    = "Anything"
 
-instance Predicate (a :|: b) where
+instance (Predicate a x, Predicate b y) => Predicate (a :|: b) (Either x y) where
     apply (a :|: b) r =
         case apply a r of
-            Good -> Good
-            _    -> apply b r
+            Good x -> Good (Left x)
+            _      -> case apply b r of
+                          Good y  -> Good (Right y)
+                          Bad i m -> Bad i m
     toStr (a :|: b) = toStr a <> " | " <> toStr b
 
-instance Predicate (a :&: b) where
+instance (Predicate a x, Predicate b y) => Predicate (a :&: b) (x, y) where
     apply (a :&: b) r =
         case apply a r of
-            Good -> apply b r
-            bad  -> bad
+            Good x  -> case apply b r of
+                           Good y  -> Good (x, y)
+                           Bad i m -> Bad i m
+            Bad i m -> Bad i m
     toStr (a :&: b) = toStr a <> " & " <> toStr b
 
 -- | A 'Predicate' against the 'Request's "Accept" header.
-data Accept      = Accept ByteString
-                 --
--- | A 'Predicate' which tests if any of the given
--- names denote a 'Request' parameter.
-data AnyParamOf  = AnyParamOf [ByteString]
+data Accept = Accept ByteString
 
--- | A 'Predicate' which tests if any of the given
--- names denote a 'Request' header name.
-data AnyHeaderOf = AnyHeaderOf [ByteString]
+-- | A 'Predicate' looking for some parameter value.
+data Param  = Param ByteString
 
-instance Predicate Accept where
+instance Predicate Accept () where
     apply (Accept x) r =
         if x `elem` headers' r "accept"
-            then Good
+            then Good ()
             else Bad 406 (Just "Expected 'Accept: accept/json'.")
     toStr (Accept x) = "Accept: " <> show' x
 
-instance Predicate AnyParamOf where
-    apply (AnyParamOf xs) r =
-        if null . concat $ map (params' r) xs
-            then Bad 400 (Just ("Expected any of " <> show' xs <> "."))
-            else Good
-    toStr (AnyParamOf xs) = "AnyParamOf: " <> show' xs
-
-instance Predicate AnyHeaderOf where
-    apply (AnyHeaderOf xs) r =
-        if null . concat $ map (headers' r) xs
-            then Bad 400 (Just ("Expected any of " <> show' xs <> "."))
-            else Good
-    toStr (AnyHeaderOf xs) = "AnyHeaderOf: " <> show' xs
+instance Predicate Param ByteString where
+    apply (Param x) r =
+        case params' r x of
+            []    -> Bad 400 (Just ("Expected parameter " <> show' x <> "."))
+            (v:_) -> Good v
+    toStr (Param x) = "Param: " <> show' x
 
 -- | Evaluates a 'Predicate' against the Snap 'Request'.
-eval :: (MonadSnap m, Predicate p) => p -> m Result
+eval :: (MonadSnap m, Predicate p x) => p -> m (Result x)
 eval p = apply p <$> getRequest
 
 -- Internal helpers:
