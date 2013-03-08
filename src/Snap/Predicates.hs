@@ -91,6 +91,13 @@ instance Predicate AnyParamOf where
             else Good
     toStr (AnyParamOf xs) = "AnyParamOf: " <> show' xs
 
+instance Predicate AnyHeaderOf where
+    apply (AnyHeaderOf xs) r =
+        if null . concat $ map (headers' r) xs
+            then Bad 400 (Just ("Expected any of " <> show' xs <> "."))
+            else Good
+    toStr (AnyHeaderOf xs) = "AnyHeaderOf: " <> show' xs
+
 -- | Evaluates a 'Predicate' against the Snap 'Request'.
 eval :: (MonadSnap m, Predicate p) => p -> m Result
 eval p = apply p <$> getRequest

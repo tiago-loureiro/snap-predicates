@@ -58,6 +58,7 @@ get :: (MonadSnap m, Predicate p)
     -> Routes m ()
 get = addRoute GET
 
+-- | Add a route with 'Method' 'POST'
 post :: (MonadSnap m, Predicate p)
      => ByteString -- ^ path
      -> m ()       -- ^ handler
@@ -65,6 +66,7 @@ post :: (MonadSnap m, Predicate p)
      -> Routes m ()
 post = addRoute POST
 
+-- | Add a route with 'Method' 'PUT'
 put :: (MonadSnap m, Predicate p)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
@@ -72,6 +74,7 @@ put :: (MonadSnap m, Predicate p)
     -> Routes m ()
 put = addRoute PUT
 
+-- | Add a route with 'Method' 'DELETE'
 delete :: (MonadSnap m, Predicate p)
        => ByteString -- ^ path
        -> m ()       -- ^ handler
