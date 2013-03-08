@@ -1,4 +1,8 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, TypeOperators, TupleSections, GADTs #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE FlexibleContexts      #-}
 module Snap.Routes
   ( Routes
   , showRoutes
@@ -15,6 +19,7 @@ import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Monoid
 import Data.String
+import Predicates hiding (True, False)
 import Snap.Core
 import Snap.Predicates
 import Control.Monad.Trans.State.Strict (State)
@@ -22,7 +27,7 @@ import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 
 data Pred where
-    Pred :: Predicate p => p -> Pred
+    Pred :: (Show p, Predicate p Request) => p -> Pred
 
 data Route m = Route
   { _method  :: !Method
@@ -42,7 +47,7 @@ instance Monad (Routes m) where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
-addRoute :: (MonadSnap m, Predicate p)
+addRoute :: (MonadSnap m, Show p, Predicate p Request)
          => Method
          -> ByteString -- path
          -> m ()       -- handler
@@ -51,7 +56,7 @@ addRoute :: (MonadSnap m, Predicate p)
 addRoute m r x p = Routes $ State.modify ((Route m r (Pred p) x):)
 
 -- | Add a route with 'Method' 'GET'
-get :: (MonadSnap m, Predicate p)
+get :: (MonadSnap m, Show p, Predicate p Request)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -59,7 +64,7 @@ get :: (MonadSnap m, Predicate p)
 get = addRoute GET
 
 -- | Add a route with 'Method' 'POST'
-post :: (MonadSnap m, Predicate p)
+post :: (MonadSnap m, Show p, Predicate p Request)
      => ByteString -- ^ path
      -> m ()       -- ^ handler
      -> p          -- ^ 'Predicate'
@@ -67,7 +72,7 @@ post :: (MonadSnap m, Predicate p)
 post = addRoute POST
 
 -- | Add a route with 'Method' 'PUT'
-put :: (MonadSnap m, Predicate p)
+put :: (MonadSnap m, Show p, Predicate p Request)
     => ByteString -- ^ path
     -> m ()       -- ^ handler
     -> p          -- ^ 'Predicate'
@@ -75,7 +80,7 @@ put :: (MonadSnap m, Predicate p)
 put = addRoute PUT
 
 -- | Add a route with 'Method' 'DELETE'
-delete :: (MonadSnap m, Predicate p)
+delete :: (MonadSnap m, Show p, Predicate p Request)
        => ByteString -- ^ path
        -> m ()       -- ^ handler
        -> p          -- ^ 'Predicate'
@@ -89,7 +94,7 @@ showRoutes (Routes routes) =
     let rs = reverse $ State.execState routes []
     in flip map rs $ \x ->
         case _pred x of
-            Pred p -> show' (_method x) <> " " <> show' (_path x) <> " " <> toStr p
+            Pred p -> show' (_method x) <> " " <> show' (_path x) <> " " <> show' p
   where
     show' :: Show a => a -> ByteString
     show' = fromString . show
@@ -117,7 +122,7 @@ select :: MonadSnap m => [Route m] -> m ()
 select g = do
     ms <- filterM byMethod g
     if L.null ms
-        then respond (Bad 405 Nothing)
+        then respond (No 405 Nothing)
         else evalPreds ms
   where
     byMethod :: MonadSnap m => Route m -> m Bool
@@ -126,17 +131,17 @@ select g = do
     evalPreds :: MonadSnap m => [Route m] -> m ()
     evalPreds rs = do
         es <- forM rs $ \r ->
-            case _pred r of Pred p -> (, _handler r) <$> eval p
+            case _pred r of Pred p -> (\x -> (apply p x, _handler r)) <$> getRequest
         case L.find (isGood . fst) es of
             Just (_, h) -> h
             Nothing     -> respond (fst . head $ es)
 
     isGood :: Result a -> Bool
-    isGood (Good _) = True
-    isGood _        = False
+    isGood (Yes _) = True
+    isGood _       = False
 
 respond :: MonadSnap m => Result a -> m ()
-respond (Bad i msg) = do
+respond (No i msg) = do
     putResponse . clearContentLength
                 . setResponseCode (fromIntegral i)
                 $ emptyResponse
