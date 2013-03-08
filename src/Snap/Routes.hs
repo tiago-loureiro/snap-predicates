@@ -17,11 +17,12 @@ where
 import Control.Applicative
 import Control.Monad
 import Data.ByteString (ByteString)
+import Data.Either
 import Data.Monoid
 import Data.String
+import Data.Word
 import Predicates hiding (True, False)
 import Snap.Core
-import Snap.Predicates
 import Control.Monad.Trans.State.Strict (State)
 import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
@@ -123,22 +124,25 @@ select g = do
     ms <- filterM byMethod g
     if L.null ms
         then respond (No 405 Nothing)
-        else evalPreds ms
+        else evalAll ms
   where
     byMethod :: MonadSnap m => Route m -> m Bool
     byMethod x = (_method x ==) <$> getsRequest rqMethod
 
-    evalPreds :: MonadSnap m => [Route m] -> m ()
-    evalPreds rs = do
-        es <- forM rs $ \r ->
-            case _pred r of Pred p -> (\x -> (apply p x, _handler r)) <$> getRequest
-        case L.find (isGood . fst) es of
-            Just (_, h) -> h
-            Nothing     -> respond (fst . head $ es)
+    evalAll :: MonadSnap m => [Route m] -> m ()
+    evalAll rs = do
+        req <- getRequest
+        let (n, y) = partitionEithers $ map (eval req) rs
+        if null y
+            then let (i, m) = head n in respond (No i m)
+            else head y
 
-    isGood :: Result a -> Bool
-    isGood (Yes _) = True
-    isGood _       = False
+    eval :: MonadSnap m => Request -> Route m -> Either (Word, Maybe ByteString) (m ())
+    eval rq r = case _pred r of
+        Pred p ->
+            case apply p rq of
+                No i m -> Left (i, m)
+                Yes v  -> Right (_handler r)
 
 respond :: MonadSnap m => Result a -> m ()
 respond (No i msg) = do

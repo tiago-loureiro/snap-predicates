@@ -25,7 +25,7 @@ instance Predicate Accept Request where
             else No 406 (Just "Expected 'Accept: accept/json'.")
 
 instance Show Accept where
-    show (Accept x) = "Accept: \"" ++ show x ++ "\""
+    show (Accept x) = "Accept: " ++ show x
 
 -- | A 'Predicate' looking for some parameter value.
 data Param  = Param ByteString
@@ -34,11 +34,11 @@ instance Predicate Param Request where
     type Value Param = ByteString
     apply (Param x) r =
         case params' r x of
-            []    -> No 400 (Just ("Expected parameter " <> x <> "."))
+            []    -> No 400 (Just ("Expected parameter '" <> x <> "'."))
             (v:_) -> Yes v
 
 instance Show Param where
-    show (Param x) = "Param: \"" ++ show x ++ "\""
+    show (Param x) = "Param: " ++ show x
 
 -- Internal helpers:
 
