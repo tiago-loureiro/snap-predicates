@@ -7,6 +7,7 @@ module Main where
 
 import Data.ByteString (ByteString)
 import Data.Monoid
+import Predicates
 import Snap.Core
 import Snap.Routes
 import Snap.Predicates
@@ -18,14 +19,12 @@ main = do
     mapM_ CS.putStrLn (showRoutes sitemap)
     quickHttpServe (route . expandRoutes $ sitemap)
 
-sitemap :: Routes Snap ()
+sitemap :: Routes ()
 sitemap = do
     get "/" getUser $
-        Accept "application/json" :&: AnyParamOf ["name", "nick"]
+        Accept "application/json" :&: Param "name"
 
-    get "/status" status Anything
-
-    get "/secret" secret (MyParamCheck "foo")
+    get "/status" status $ Const 'x'
 
     post "/" createUser $
         Accept "application/x-thrift"
@@ -33,37 +32,14 @@ sitemap = do
     post "/" createUser' $
         Accept "application/json"
 
-getUser, createUser, createUser' :: MonadSnap m => m ()
-getUser     = writeBS "getUser"
-createUser  = writeBS "createUser"
-createUser' = writeBS "createUser'"
+getUser :: ((), ByteString) -> Snap ()
+getUser (_, v) = writeBS $ "getUser: " <> v
 
-status, secret :: MonadSnap m => m ()
-status = writeBS "status"
-secret = writeBS "secret"
-```
+createUser :: () -> Snap ()
+createUser _ = writeBS "createUser"
 
-`MyParamCheck` is a custom `Predicate` (and a somewhat contrived example):
+createUser' :: () -> Snap ()
+createUser' _ = writeBS "createUser'"
 
-```haskell
-data MyParamCheck = MyParamCheck ByteString
-
-instance Predicate MyParamCheck where
-    apply (MyParamCheck x) r =
-        maybe (Bad 400 (Just $ "Expecting: " <> x)) (const Good) canRead
-      where
-        canRead :: Maybe ()
-        canRead = do
-            ps <- rqParam x r
-            if null . concat $ map readSingle ps
-                then Nothing
-                else Just ()
-
-        readSingle :: ByteString -> [Int]
-        readSingle p =
-            case reads (CS.unpack p) of
-                [(i, _)] -> [i]
-                _        -> []
-
-    toStr (MyParamCheck x) = "MyParamCheck: " <> x
-```
+status :: Char -> Snap ()
+status _ = writeBS "status"

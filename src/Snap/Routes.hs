@@ -21,81 +21,83 @@ import Data.Either
 import Data.Monoid
 import Data.String
 import Data.Word
-import Predicates hiding (True, False)
+import Predicates
 import Snap.Core
 import Control.Monad.Trans.State.Strict (State)
 import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 
-data Pred where
-    Pred :: (Show p, Predicate p Request) => p -> Pred
+data Pack where
+    Pack :: (Show p, Predicate p Request)
+         => p
+         -> (Value p -> Snap ())
+         -> Pack
 
-data Route m = Route
+data Route = Route
   { _method  :: !Method
   , _path    :: !ByteString
-  , _pred    :: !Pred
-  , _handler :: m ()
+  , _pred    :: !Pack
   }
 
 -- | A monad holding a sequence of routes, which
 -- are added per 'Method' via 'get', 'post' etc.
 -- A route is defined by 'Method', path, 'Predicate'
 -- and the actual Snap handler.
-newtype Routes m a = Routes
-  { _unroutes :: State [Route m] a }
+newtype Routes a = Routes
+  { _unroutes :: State [Route] a }
 
-instance Monad (Routes m) where
+instance Monad Routes where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
-addRoute :: (MonadSnap m, Show p, Predicate p Request)
+addRoute :: (Show p, Predicate p Request)
          => Method
-         -> ByteString -- path
-         -> m ()       -- handler
-         -> p          -- predicate
-         -> Routes m ()
-addRoute m r x p = Routes $ State.modify ((Route m r (Pred p) x):)
+         -> ByteString           -- path
+         -> (Value p -> Snap ()) -- handler
+         -> p                    -- predicate
+         -> Routes ()
+addRoute m r x p = Routes $ State.modify ((Route m r (Pack p x)):)
 
 -- | Add a route with 'Method' 'GET'
-get :: (MonadSnap m, Show p, Predicate p Request)
-    => ByteString -- ^ path
-    -> m ()       -- ^ handler
-    -> p          -- ^ 'Predicate'
-    -> Routes m ()
+get :: (Show p, Predicate p Request)
+    => ByteString           -- ^ path
+    -> (Value p -> Snap ()) -- ^ handler
+    -> p                    -- ^ 'Predicate'
+    -> Routes ()
 get = addRoute GET
 
 -- | Add a route with 'Method' 'POST'
-post :: (MonadSnap m, Show p, Predicate p Request)
-     => ByteString -- ^ path
-     -> m ()       -- ^ handler
-     -> p          -- ^ 'Predicate'
-     -> Routes m ()
+post :: (Show p, Predicate p Request)
+     => ByteString           -- ^ path
+     -> (Value p -> Snap ()) -- ^ handler
+     -> p                    -- ^ 'Predicate'
+     -> Routes ()
 post = addRoute POST
 
 -- | Add a route with 'Method' 'PUT'
-put :: (MonadSnap m, Show p, Predicate p Request)
-    => ByteString -- ^ path
-    -> m ()       -- ^ handler
-    -> p          -- ^ 'Predicate'
-    -> Routes m ()
+put :: (Show p, Predicate p Request)
+    => ByteString           -- ^ path
+    -> (Value p -> Snap ()) -- ^ handler
+    -> p                    -- ^ 'Predicate'
+    -> Routes ()
 put = addRoute PUT
 
 -- | Add a route with 'Method' 'DELETE'
-delete :: (MonadSnap m, Show p, Predicate p Request)
-       => ByteString -- ^ path
-       -> m ()       -- ^ handler
-       -> p          -- ^ 'Predicate'
-       -> Routes m ()
+delete :: (Show p, Predicate p Request)
+       => ByteString           -- ^ path
+       -> (Value p -> Snap ()) -- ^ handler
+       -> p                    -- ^ 'Predicate'
+       -> Routes ()
 delete = addRoute DELETE
 
 -- | Turn route definitions into string format.
 -- Each route is represented as a 'ByteString'.
-showRoutes :: Routes m () -> [ByteString]
+showRoutes :: Routes () -> [ByteString]
 showRoutes (Routes routes) =
     let rs = reverse $ State.execState routes []
     in flip map rs $ \x ->
         case _pred x of
-            Pred p -> show' (_method x) <> " " <> show' (_path x) <> " " <> show' p
+            Pack p _ -> show' (_method x) <> " " <> show' (_path x) <> " " <> show' p
   where
     show' :: Show a => a -> ByteString
     show' = fromString . show
@@ -103,15 +105,15 @@ showRoutes (Routes routes) =
 -- | Turn route definitions into "snapable" format, i.e.
 -- Routes are grouped per path and selection evaluates routes
 -- against the given Snap 'Request'.
-expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
+expandRoutes :: Routes () -> [(ByteString, Snap ())]
 expandRoutes (Routes routes) =
     let rg = grouped . sorted . reverse $ State.execState routes []
     in map (\g -> (_path (head g), select g)) rg
   where
-    sorted :: [Route m] -> [Route m]
+    sorted :: [Route] -> [Route]
     sorted = L.sortBy (\a b -> _path a `compare` _path b)
 
-    grouped :: [Route m] -> [[Route m]]
+    grouped :: [Route] -> [[Route]]
     grouped = L.groupBy (\a b -> _path a == _path b)
 
 -- The handler selection proceeds as follows:
@@ -119,30 +121,30 @@ expandRoutes (Routes routes) =
 -- (2) Evaluate 'Route' predicates.
 -- (3) Pick the first one which is 'Good', or else respond with status
 --     and message of the first one.
-select :: MonadSnap m => [Route m] -> m ()
+select :: [Route] -> Snap ()
 select g = do
     ms <- filterM byMethod g
     if L.null ms
         then respond (No 405 Nothing)
         else evalAll ms
   where
-    byMethod :: MonadSnap m => Route m -> m Bool
+    byMethod :: MonadSnap m => Route -> m Bool
     byMethod x = (_method x ==) <$> getsRequest rqMethod
 
-    evalAll :: MonadSnap m => [Route m] -> m ()
+    evalAll :: [Route] -> Snap ()
     evalAll rs = do
         req <- getRequest
         let (n, y) = partitionEithers $ map (eval req) rs
         if null y
-            then let (i, m) = head n in respond (No i m)
+            then let (i, m) = head n in respond (No (if i == 0 then 400 else i) m)
             else head y
 
-    eval :: MonadSnap m => Request -> Route m -> Either (Word, Maybe ByteString) (m ())
+    eval :: Request -> Route -> Either (Word, Maybe ByteString) (Snap ())
     eval rq r = case _pred r of
-        Pred p ->
+        Pack p h ->
             case apply p rq of
                 No i m -> Left (i, m)
-                Yes v  -> Right (_handler r)
+                Yes v  -> Right (h v)
 
 respond :: MonadSnap m => Result a -> m ()
 respond (No i msg) = do
