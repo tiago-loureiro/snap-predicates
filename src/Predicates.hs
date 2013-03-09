@@ -5,8 +5,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 module Predicates where
 
-import Prelude hiding (True, False)
-import Control.Applicative
+import Control.Applicative hiding (Const)
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Word
@@ -41,38 +40,14 @@ class Predicate a b where
     type Value a
     apply :: a -> b -> Result (Value a)
 
--- | The logical True.
-data True = True
+data Const a = Const a
 
-instance Predicate True a where
-    type Value True = ()
-    apply True _ = Yes ()
+instance Predicate (Const a) b where
+    type Value (Const a) = a
+    apply (Const a) _ = Yes a
 
-instance Show True where
-    show True = "True"
-
--- | The logical False.
-data False = False
-
-instance Predicate False a where
-    type Value False = ()
-    apply False _ = No 0 Nothing
-
-instance Show False where
-    show False = "False"
-
--- | The logical NOT connective of a 'Predicate'.
-data Not a = Not a
-
-instance Predicate a x => Predicate (Not a) x where
-    type Value (Not a) = ()
-    apply (Not a) r =
-        case apply a r of
-            Yes _ -> No 0 Nothing
-            _      -> Yes ()
-
-instance Show a => Show (Not a) where
-    show (Not a) = "(not " ++ show a ++ ")"
+instance Show a => Show (Const a) where
+    show (Const a) = "Const " ++ show a
 
 -- | The logical OR connective of two 'Predicate's.
 data a :|: b = a :|: b
