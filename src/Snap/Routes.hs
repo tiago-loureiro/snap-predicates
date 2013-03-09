@@ -136,7 +136,7 @@ select g = do
         req <- getRequest
         let (n, y) = partitionEithers $ map (eval req) rs
         if null y
-            then let (i, m) = head n in respond (No (if i == 0 then 400 else i) m)
+            then let (i, m) = head n in respond (No i m)
             else head y
 
     eval :: Request -> Route -> Either (Word, Maybe ByteString) (Snap ())
