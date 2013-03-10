@@ -7,19 +7,18 @@ import Control.Applicative hiding (Const)
 import Control.Monad
 
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
--- some meta-data which are threaded through 'Predicate' evaluation.
+-- some meta-data which is threaded through 'Predicate' evaluation.
 data Boolean f t =
     F (Maybe f) -- ^ logical False with some meta-data
   | T t         -- ^ logical True with some meta-data
   deriving (Eq, Show)
 
--- | The 'Predicate' class declares the functions 'apply' which
+-- | The 'Predicate' class declares the function 'apply' which
 -- evaluates the predicate against some value, returning a value
 -- of type 'Boolean'.
---
 -- Besides being parameterised over predicate type and predicate
 -- parameter, the class is also parameterised over the actual types
--- of 'T's and 'F's meta-data.
+-- of T's and F's meta-data.
 class Predicate p a f t where
     apply :: p -> a -> Boolean f t
 
@@ -45,7 +44,7 @@ instance Alternative (Boolean f) where
     (<|>) = mplus
 
 -- | A 'Predicate' instance which always returns 'T' with
--- the given 'TVal' as meta-data.
+-- the given value as T's meta-data.
 data Const t = Const t
 
 instance Predicate (Const t) a f t where
@@ -55,7 +54,7 @@ instance Show t => Show (Const t) where
     show (Const a) = "Const " ++ show a
 
 -- | A 'Predicate' instance which always returns 'F' with
--- the given 'FVal' as meta-data.
+-- the given value as F's meta-data.
 data Fail f = Fail f
 
 instance Predicate (Fail f) a f t where

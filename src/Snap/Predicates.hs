@@ -22,7 +22,7 @@ instance Predicate Accept Request (Word, Maybe ByteString) () where
     apply (Accept x) r =
         if x `elem` headers' r "accept"
             then T ()
-            else F $ Just (406, Just $ "Expected 'Accept: " <> x <> ".")
+            else F $ Just (406, Just $ "Expected 'Accept: " <> x <> "'.")
 
 instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
