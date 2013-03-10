@@ -32,7 +32,7 @@ sitemap = do
     get "/" getUser $
         Accept "application/json" :&: Param "name"
 
-    get "/status" status $ Fail (400, Just "/status closed")
+    get "/status" status $ Const 'x'
 
     post "/" createUser $
         Accept "application/x-thrift"

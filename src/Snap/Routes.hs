@@ -34,9 +34,9 @@ import qualified Data.List as L
 type Error = (Word, Maybe ByteString)
 
 data Pack m where
-    Pack :: (Show p, Predicate p Request, FVal p ~ Error)
+    Pack :: (Show p, Predicate p Request Error a)
          => p
-         -> (TVal p -> m ())
+         -> (a -> m ())
          -> Pack m
 
 data Route m = Route
@@ -52,19 +52,19 @@ instance Monad (Routes m) where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
-addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
+addRoute :: (MonadSnap m, Show p, Predicate p Request Error a)
          => Method
-         -> ByteString        -- path
-         -> (TVal p -> m ())  -- handler
-         -> p                 -- predicate
+         -> ByteString   -- path
+         -> (a -> m ())  -- handler
+         -> p            -- predicate
          -> Routes m ()
 addRoute m r x p = Routes $ State.modify ((Route m r (Pack p x)):)
 
 get, head, post, put, delete, trace, options, connect ::
-    (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
-    => ByteString        -- ^ path
-    -> (TVal p -> m ())  -- ^ handler
-    -> p                 -- ^ 'Predicate'
+    (MonadSnap m, Show p, Predicate p Request Error a)
+    => ByteString   -- ^ path
+    -> (a -> m ())  -- ^ handler
+    -> p            -- ^ 'Predicate'
     -> Routes m ()
 get     = addRoute GET
 head    = addRoute HEAD

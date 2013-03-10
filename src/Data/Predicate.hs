@@ -1,6 +1,4 @@
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances     #-}
 module Data.Predicate where
@@ -20,12 +18,10 @@ data Boolean f t =
 -- of type 'Boolean'.
 --
 -- Besides being parameterised over predicate type and predicate
--- parameter, the class leaves open the actual types of 'T's and
--- 'F's meta-data, which must be defined in instance declarations.
-class Predicate a b where
-    type FVal a
-    type TVal a
-    apply :: a -> b -> Boolean (FVal a) (TVal a)
+-- parameter, the class is also parameterised over the actual types
+-- of 'T's and 'F's meta-data.
+class Predicate p a f t where
+    apply :: p -> a -> Boolean f t
 
 instance Monad (Boolean f) where
     return      = T
@@ -50,39 +46,32 @@ instance Alternative (Boolean f) where
 
 -- | A 'Predicate' instance which always returns 'T' with
 -- the given 'TVal' as meta-data.
-data Const f t where
-    Const :: t -> Const f t
+data Const t = Const t
 
-instance Predicate (Const f t) c where
-    type FVal (Const f t) = f
-    type TVal (Const f t) = t
-    apply (Const a) _     = T a
+instance Predicate (Const t) a f t where
+    apply (Const a) _ = T a
 
-instance Show t => Show (Const f t) where
+instance Show t => Show (Const t) where
     show (Const a) = "Const " ++ show a
 
 -- | A 'Predicate' instance which always returns 'F' with
 -- the given 'FVal' as meta-data.
-data Fail f t where
-    Fail :: f -> Fail f t
+data Fail f = Fail f
 
-instance Predicate (Fail f t) c where
-    type FVal (Fail f t) = f
-    type TVal (Fail f t) = t
-    apply (Fail a) _     = F $ Just a
+instance Predicate (Fail f) a f t where
+    apply (Fail a) _ = F $ Just a
 
-instance Show f => Show (Fail f t) where
+instance Show f => Show (Fail f) where
     show (Fail a) = "Fail " ++ show a
 
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's.
 data a :|: b = a :|: b
 
-instance (Predicate a x, Predicate b x, FVal a ~ FVal b) => Predicate (a :|: b) x
+instance (Predicate a c f t0, Predicate b c f t1) =>
+    Predicate (a :|: b) c f (Either t0 t1)
   where
-    type FVal (a :|: b) = FVal a
-    type TVal (a :|: b) = Either (TVal a) (TVal b)
-    apply (a :|: b) r   = (Left <$> apply a r) <|> (Right <$> apply b r)
+    apply (a :|: b) r = (Left <$> apply a r) <|> (Right <$> apply b r)
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
@@ -91,11 +80,10 @@ instance (Show a, Show b) => Show (a :|: b) where
 -- AND connective of two 'Predicate's.
 data a :&: b = a :&: b
 
-instance (Predicate a x, Predicate b x, FVal a ~ FVal b) => Predicate (a :&: b) x
+instance (Predicate a c f t0, Predicate b c f t1) =>
+    Predicate (a :&: b) c f (t0, t1)
   where
-    type FVal (a :&: b) = FVal a
-    type TVal (a :&: b) = (TVal a, TVal b)
-    apply (a :&: b) r   = (,) <$> apply a r <*> apply b r
+    apply (a :&: b) r = (,) <$> apply a r <*> apply b r
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"

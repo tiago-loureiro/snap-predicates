@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances     #-}
 module Snap.Predicates
   ( Accept (..)
   , Param (..)
@@ -18,13 +18,11 @@ import qualified Data.Map.Strict as M
 -- | A 'Predicate' against the 'Request's "Accept" header.
 data Accept = Accept ByteString
 
-instance Predicate Accept Request where
-    type FVal Accept = (Word, Maybe ByteString)
-    type TVal Accept = ()
+instance Predicate Accept Request (Word, Maybe ByteString) () where
     apply (Accept x) r =
         if x `elem` headers' r "accept"
             then T ()
-            else F $ Just (406, Just $ "Expected 'Accept: accept/json'.")
+            else F $ Just (406, Just $ "Expected 'Accept: " <> x <> ".")
 
 instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
@@ -32,9 +30,7 @@ instance Show Accept where
 -- | A 'Predicate' looking for some parameter value.
 data Param  = Param ByteString
 
-instance Predicate Param Request where
-    type FVal Param = (Word, Maybe ByteString)
-    type TVal Param = ByteString
+instance Predicate Param Request (Word, Maybe ByteString) ByteString where
     apply (Param x) r =
         case params' r x of
             []    -> F $ Just (400, Just $ "Expected parameter '" <> x <> "'.")
