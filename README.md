@@ -1,3 +1,11 @@
+Snap-Predicates
+===============
+
+This library provides a definition of a type-class `Predicate`
+together with several concrete implementations which are used to
+constrain the set of possible `Snap` handlers in a type-safe
+way.
+
 Example
 -------
 
@@ -7,7 +15,7 @@ module Main where
 
 import Data.ByteString (ByteString)
 import Data.Monoid
-import Predicates
+import Data.Predicate
 import Snap.Core
 import Snap.Routes
 import Snap.Predicates
@@ -19,12 +27,12 @@ main = do
     mapM_ CS.putStrLn (showRoutes sitemap)
     quickHttpServe (route . expandRoutes $ sitemap)
 
-sitemap :: Routes ()
+sitemap :: Routes Snap ()
 sitemap = do
     get "/" getUser $
         Accept "application/json" :&: Param "name"
 
-    get "/status" status $ Const 'x'
+    get "/status" status $ Fail (400, Just "/status closed")
 
     post "/" createUser $
         Accept "application/x-thrift"
@@ -43,3 +51,4 @@ createUser' _ = writeBS "createUser'"
 
 status :: Char -> Snap ()
 status _ = writeBS "status"
+```

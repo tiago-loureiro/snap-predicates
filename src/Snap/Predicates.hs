@@ -9,7 +9,8 @@ where
 
 import Data.ByteString (ByteString)
 import Data.Monoid
-import Predicates
+import Data.Word
+import Data.Predicate
 import Snap.Core
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Map.Strict as M
@@ -18,11 +19,12 @@ import qualified Data.Map.Strict as M
 data Accept = Accept ByteString
 
 instance Predicate Accept Request where
-    type Value Accept = ()
+    type FVal Accept = (Word, Maybe ByteString)
+    type TVal Accept = ()
     apply (Accept x) r =
         if x `elem` headers' r "accept"
-            then Yes ()
-            else No 406 (Just "Expected 'Accept: accept/json'.")
+            then T ()
+            else F $ Just (406, Just $ "Expected 'Accept: accept/json'.")
 
 instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
@@ -31,11 +33,12 @@ instance Show Accept where
 data Param  = Param ByteString
 
 instance Predicate Param Request where
-    type Value Param = ByteString
+    type FVal Param = (Word, Maybe ByteString)
+    type TVal Param = ByteString
     apply (Param x) r =
         case params' r x of
-            []    -> No 400 (Just ("Expected parameter '" <> x <> "'."))
-            (v:_) -> Yes v
+            []    -> F $ Just (400, Just $ "Expected parameter '" <> x <> "'.")
+            (v:_) -> T v
 
 instance Show Param where
     show (Param x) = "Param: " ++ show x

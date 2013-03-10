@@ -3,22 +3,24 @@ version:             0.1.0
 synopsis:            Predicates for route definitions.
 license:             MIT
 license-file:        LICENSE
-author:              Cf. AUTHORS
-maintainer:          Cf. AUTHORS
-copyright:           Copyright (c) 2013 snap-predicate authors
+author:              Toralf Wittner, Brendan Hay
+maintainer:          Toralf Wittner <tw@dtex.org>
+copyright:           Copyright (c) 2013 Toralf Wittner, Brendan Hay
 stability:           experimental
 category:            Snap
 build-type:          Simple
 cabal-version:       >= 1.8
 extra-source-files:  README.md
-                   , AUTHORS
 
 description:
-    Provide a small DSL to express predicates on Snap route definitions.
+    Provides a definition of a predicate type-class together
+    with several concrete implementations which are used to
+    constrain the set of possible Snap handlers in a type-safe
+    way.
 
 library
     hs-source-dirs:  src
-    exposed-modules: Predicates, Snap.Predicates, Snap.Routes
+    exposed-modules: Data.Predicate, Snap.Predicates, Snap.Routes
 
     build-depends:
         base             >= 4   && < 5
@@ -32,8 +34,6 @@ library
     ghc-options:
         -Wall
         -O2
-        -threaded
-        -rtsopts
         -fwarn-tabs
         -funbox-strict-fields
         -fno-warn-unused-do-bind
