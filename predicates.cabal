@@ -29,14 +29,12 @@ library
       , containers       >= 0.5
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
-      , snap-server      >= 0.9
 
     ghc-options:
         -Wall
         -O2
         -fwarn-tabs
         -funbox-strict-fields
-        -fno-warn-unused-do-bind
 
 source-repository head
     type:             git
