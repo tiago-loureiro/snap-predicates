@@ -73,23 +73,38 @@ instance Predicate (Fail f t) a where
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail " ++ show a
 
--- | Data-type used for tupling-up the results of ':&:'.
-data a :*: b = a :*: b deriving (Eq, Show)
+-- | A 'Predicate' instance corresponding to the logical
+-- OR connective of two 'Predicate's. It requires the
+-- meta-data of each 'T'rue branch to be of the same type.
+data a :|: b = a :|: b
+
+instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Predicate (a :|: b) c
+  where
+    type FVal (a :|: b) = FVal a
+    type TVal (a :|: b) = TVal a
+    apply (a :|: b) r   = apply a r <|> apply b r
+
+instance (Show a, Show b) => Show (a :|: b) where
+    show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
 
 type a :+: b = Either a b
 
 -- | A 'Predicate' instance corresponding to the logical
--- OR connective of two 'Predicate's.
-data a :|: b = a :|: b
+-- OR connective of two 'Predicate's. The meta-data of
+-- each 'T'rue branch can be of different types.
+data a :||: b = a :||: b
 
-instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :|: b) c
+instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b) c
   where
-    type FVal (a :|: b) = FVal a
-    type TVal (a :|: b) = TVal a :+: TVal b
-    apply (a :|: b) r   = (Left <$> apply a r) <|> (Right <$> apply b r)
+    type FVal (a :||: b) = FVal a
+    type TVal (a :||: b) = TVal a :+: TVal b
+    apply (a :||: b) r   = (Left <$> apply a r) <|> (Right <$> apply b r)
 
-instance (Show a, Show b) => Show (a :|: b) where
-    show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
+instance (Show a, Show b) => Show (a :||: b) where
+    show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
+
+-- | Data-type used for tupling-up the results of ':&:'.
+data a :*: b = a :*: b deriving (Eq, Show)
 
 -- | A 'Predicate' instance corresponding to the logical
 -- AND connective of two 'Predicate's.

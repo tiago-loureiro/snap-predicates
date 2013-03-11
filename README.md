@@ -29,15 +29,22 @@ main = do
 
 sitemap :: Routes Snap ()
 sitemap = do
-    get "/" getUser $
+    get "/a" getUser $
         AcceptJson :&: (Param "name" :|: Param "nick") :&: Param "foo"
+
+    get "/b" getUser' $
+        AcceptJson :&: (Param "name" :||: Param "nick") :&: Param "foo"
 
     get  "/status" status      $ Fail (410, Just "Gone.")
     post "/"       createUser  $ AcceptThrift
     post "/"       createUser' $ AcceptJson
 
-getUser :: AcceptJson :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
+getUser :: AcceptJson :*: ByteString :*: ByteString -> Snap ()
 getUser (_ :*: name :*: foo) =
+    writeBS $ "getUser: name or nick=" <> name <> " foo=" <> foo
+
+getUser' :: AcceptJson :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
+getUser' (_ :*: name :*: foo) =
     case name of
         Left  a -> writeBS $ "getUser: name=" <> a <> " foo=" <> foo
         Right b -> writeBS $ "getUser: nick=" <> b <> " foo=" <> foo
