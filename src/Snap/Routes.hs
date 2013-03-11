@@ -110,7 +110,7 @@ select :: MonadSnap m => [Route m] -> m ()
 select g = do
     ms <- filterM byMethod g
     if L.null ms
-        then respond (F $ Just (405, Nothing))
+        then respond (405, Nothing)
         else evalAll ms
   where
     byMethod :: MonadSnap m => Route m -> m Bool
@@ -121,7 +121,7 @@ select g = do
         req <- getRequest
         let (n, y) = partitionEithers $ map (eval req) rs
         if null y
-            then respond (F $ Just $ L.head n)
+            then respond (L.head n)
             else L.head y
 
     eval :: MonadSnap m => Request -> Route m -> Either Error (m ())
@@ -132,11 +132,9 @@ select g = do
                 F (Just m) -> Left m
                 T v        -> Right (h v)
 
-respond :: MonadSnap m => Boolean Error t -> m ()
-respond (F (Just (i, msg))) = do
+respond :: MonadSnap m => Error -> m ()
+respond (i, msg) = do
     putResponse . clearContentLength
                 . setResponseCode (fromIntegral i)
                 $ emptyResponse
     maybe (return ()) writeBS msg
-respond (F Nothing) = respond (F $ Just (500, Nothing))
-respond _           = return ()
