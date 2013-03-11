@@ -63,6 +63,11 @@ instance Predicate (Fail f) a f t where
 instance Show f => Show (Fail f) where
     show (Fail a) = "Fail " ++ show a
 
+-- | Data-type used for tupling-up the results of ':&:'.
+data a :*: b = a :*: b deriving (Eq, Show)
+
+type a :+: b = Either a b
+
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's.
 data a :|: b = a :|: b
@@ -80,9 +85,9 @@ instance (Show a, Show b) => Show (a :|: b) where
 data a :&: b = a :&: b
 
 instance (Predicate a c f t0, Predicate b c f t1) =>
-    Predicate (a :&: b) c f (t0, t1)
+    Predicate (a :&: b) c f (t0 :*: t1)
   where
-    apply (a :&: b) r = (,) <$> apply a r <*> apply b r
+    apply (a :&: b) r = (:*:) <$> apply a r <*> apply b r
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"

@@ -10,7 +10,7 @@ Example
 -------
 
 ```haskell
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeOperators #-}
 module Main where
 
 import Data.ByteString (ByteString)
@@ -30,7 +30,9 @@ main = do
 sitemap :: Routes Snap ()
 sitemap = do
     get "/" getUser $
-        Accept "application/json" :&: (Param "name" :|: Param "nick")
+        Accept "application/json"
+        :&: (Param "name" :|: Param "nick")
+        :&: Param "foo"
 
     get "/status" status $ Const 'x'
 
@@ -40,9 +42,11 @@ sitemap = do
     post "/" createUser' $
         Accept "application/json"
 
-getUser :: ((), Either ByteString ByteString) -> Snap ()
-getUser (_, Left  v) = writeBS $ "getUser: name=" <> v
-getUser (_, Right v) = writeBS $ "getUser: nick=" <> v
+getUser :: () :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
+getUser (_ :*: name :*: foo) =
+    case name of
+        Left  a -> writeBS $ "getUser: name=" <> a <> " foo=" <> foo
+        Right b -> writeBS $ "getUser: nick=" <> b <> " foo=" <> foo
 
 createUser :: () -> Snap ()
 createUser _ = writeBS "createUser"
