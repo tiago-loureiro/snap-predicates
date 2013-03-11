@@ -30,13 +30,14 @@ instance Predicate Accept Request where
 instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
 
-
+-- | A 'Predicate' which is true only for Accept: "application/json".
 data AcceptJson = AcceptJson
 
-instance Predicate AcceptJson Request (Word, Maybe ByteString) AcceptJson where
-    apply AcceptJson r = do
-        apply (Accept "application/json") r :: Boolean (Word, Maybe ByteString) ()
-        return AcceptJson
+instance Predicate AcceptJson Request where
+    type FVal AcceptJson = (Word, Maybe ByteString)
+    type TVal AcceptJson = AcceptJson
+    apply AcceptJson r =
+        apply (Accept "application/json") r >> return AcceptJson
 
 instance Show AcceptJson where
     show AcceptJson = "Accept: \"application/json\""
