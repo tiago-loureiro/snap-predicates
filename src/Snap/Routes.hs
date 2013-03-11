@@ -9,6 +9,7 @@ module Snap.Routes
   , expandRoutes
   , get
   , Snap.Routes.head
+  , addRoute
   , post
   , put
   , delete
@@ -54,9 +55,9 @@ instance Monad (Routes m) where
 
 addRoute :: (MonadSnap m, Show p, Predicate p Request Error a)
          => Method
-         -> ByteString   -- path
-         -> (a -> m ())  -- handler
-         -> p            -- predicate
+         -> ByteString   -- ^ path
+         -> (a -> m ())  -- ^ handler
+         -> p            -- ^ predicate
          -> Routes m ()
 addRoute m r x p = Routes $ State.modify ((Route m r (Pack p x)):)
 
