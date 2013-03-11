@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 module Snap.Predicates
   ( Accept (..)
+  , AcceptJson (..)
   , Param (..)
   )
 where
@@ -26,6 +27,17 @@ instance Predicate Accept Request (Word, Maybe ByteString) () where
 
 instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
+
+
+data AcceptJson = AcceptJson
+
+instance Predicate AcceptJson Request (Word, Maybe ByteString) AcceptJson where
+    apply AcceptJson r = do
+        apply (Accept "application/json") r :: Boolean (Word, Maybe ByteString) ()
+        return AcceptJson
+
+instance Show AcceptJson where
+    show AcceptJson = "Accept: \"application/json\""
 
 -- | A 'Predicate' looking for some parameter value.
 data Param  = Param ByteString
