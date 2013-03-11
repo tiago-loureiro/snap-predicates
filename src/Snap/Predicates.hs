@@ -4,6 +4,7 @@
 module Snap.Predicates
   ( Accept (..)
   , AcceptJson (..)
+  , AcceptThrift (..)
   , Param (..)
   )
 where
@@ -41,6 +42,18 @@ instance Predicate AcceptJson Request where
 
 instance Show AcceptJson where
     show AcceptJson = "Accept: \"application/json\""
+
+-- | A 'Predicate' which is true only for Accept: "application/x-thrift".
+data AcceptThrift = AcceptThrift
+
+instance Predicate AcceptThrift Request where
+    type FVal AcceptThrift = (Word, Maybe ByteString)
+    type TVal AcceptThrift = AcceptThrift
+    apply AcceptThrift r =
+        apply (Accept "application/x-thrift") r >> return AcceptThrift
+
+instance Show AcceptThrift where
+    show AcceptThrift = "Accept: \"application/x-thrift\""
 
 -- | A 'Predicate' looking for some parameter value.
 data Param  = Param ByteString

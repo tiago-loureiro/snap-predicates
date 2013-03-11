@@ -30,30 +30,24 @@ main = do
 sitemap :: Routes Snap ()
 sitemap = do
     get "/" getUser $
-        Accept "application/json"
-        :&: (Param "name" :|: Param "nick")
-        :&: Param "foo"
+        AcceptJson :&: (Param "name" :|: Param "nick") :&: Param "foo"
 
-    get "/status" status $ Const 'x'
+    get  "/status" status      $ Fail (410, Just "Gone.")
+    post "/"       createUser  $ AcceptThrift
+    post "/"       createUser' $ AcceptJson
 
-    post "/" createUser $
-        Accept "application/x-thrift"
-
-    post "/" createUser' $
-        Accept "application/json"
-
-getUser :: () :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
+getUser :: AcceptJson :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
 getUser (_ :*: name :*: foo) =
     case name of
         Left  a -> writeBS $ "getUser: name=" <> a <> " foo=" <> foo
         Right b -> writeBS $ "getUser: nick=" <> b <> " foo=" <> foo
 
-createUser :: () -> Snap ()
+createUser :: AcceptThrift -> Snap ()
 createUser _ = writeBS "createUser"
 
-createUser' :: () -> Snap ()
+createUser' :: AcceptJson -> Snap ()
 createUser' _ = writeBS "createUser'"
 
-status :: Char -> Snap ()
+status :: AcceptJson :*: Char -> Snap ()
 status _ = writeBS "status"
 ```
