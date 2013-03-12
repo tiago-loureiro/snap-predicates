@@ -32,7 +32,7 @@ instance Show Accept where
     show (Accept x) = "Accept: " ++ show x
 
 -- | A 'Predicate' which is true only for Accept: "application/json".
-data AcceptJson = AcceptJson
+data AcceptJson = AcceptJson deriving Eq
 
 instance Predicate AcceptJson Request where
     type FVal AcceptJson = (Word, Maybe ByteString)
@@ -44,7 +44,7 @@ instance Show AcceptJson where
     show AcceptJson = "Accept: \"application/json\""
 
 -- | A 'Predicate' which is true only for Accept: "application/x-thrift".
-data AcceptThrift = AcceptThrift
+data AcceptThrift = AcceptThrift deriving Eq
 
 instance Predicate AcceptThrift Request where
     type FVal AcceptThrift = (Word, Maybe ByteString)
@@ -56,7 +56,7 @@ instance Show AcceptThrift where
     show AcceptThrift = "Accept: \"application/x-thrift\""
 
 -- | A 'Predicate' looking for some parameter value.
-data Param  = Param ByteString
+data Param = Param ByteString deriving Eq
 
 instance Predicate Param Request where
     type FVal Param = (Word, Maybe ByteString)
