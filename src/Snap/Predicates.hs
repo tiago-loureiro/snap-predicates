@@ -18,7 +18,7 @@ import qualified Data.CaseInsensitive as CI
 import qualified Data.Map.Strict as M
 
 -- | A 'Predicate' against the 'Request's "Accept" header.
-data Accept = Accept ByteString
+data Accept = Accept ByteString deriving Eq
 
 instance Predicate Accept Request where
     type FVal Accept = (Word, Maybe ByteString)

@@ -28,6 +28,7 @@ library
         Data.Predicate
       , Snap.Predicates
       , Snap.Routes
+      , Snap.Predicates.Tutorial
 
     build-depends:
         base             >= 4   && < 5
