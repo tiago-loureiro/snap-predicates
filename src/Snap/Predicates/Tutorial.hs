@@ -31,9 +31,9 @@ which carries \-\- in addition to actual truth values 'Data.Predicate.T'
 and 'Data.Predicate.F' \-\- meta-data for each case:
 
 @
-data Boolean f t =
-    F (Maybe f)
-  | T t
+data 'Data.Predicate.Boolean' f t =
+    'Data.Predicate.F' (Maybe f)
+  | 'Data.Predicate.T' t
   deriving (Eq, Show)
 @
 
@@ -43,28 +43,28 @@ predicate instance is applied to some value, yielding 'Data.Predicate.T'
 or 'Data.Predicate.F'.
 
 @
-class Predicate p a where
-    type FVal p
-    type TVal p
-    apply :: p -> a -> Boolean (FVal p) (TVal p)
+class 'Data.Predicate.Predicate' p a where
+    type 'Data.Predicate.FVal' p
+    type 'Data.Predicate.TVal' p
+    apply :: p -> a -> Boolean ('Data.Predicate.FVal' p) ('Data.Predicate.TVal' p)
 @
 
 All concrete predicates are instances of this type-class, which does not
 specify the type against which the predicate is evaluated, nor the types
 of actual meta-data for the true/false case of the Boolean returned.
 Snap related predicates are normally defined against 'Snap.Core.Request'
-and in case they fail, they return an status code and an optional message.
+and in case they fail, they return a status code and an optional message.
 
 Besides these type definitions, there are some ways to connect two
-'Data.Predicate.Predicate's to form a new one as the logical @or@ or the
-logical @and@ of its parts. These are:
+'Data.Predicate.Predicate's to form a new one as the logical @OR@ or the
+logical @AND@ of its parts. These are:
 
   * 'Data.Predicate.:|:' and 'Data.Predicate.:||:' as logical @OR@s
 
   * 'Data.Predicate.:&:' as logical @AND@
 
 Besides evaluating to 'Data.Predicate.T' or 'Data.Predicate.F' depending
-of the truth values of its parts, these connectives also propagate the
+on the truth values of its parts, these connectives also propagate the
 meta-data appropriately.
 
 If 'Data.Predicate.:&:' evaluates to 'Data.Predicate.T' it has to combine
@@ -77,15 +77,15 @@ In the @OR@ case, the two predicates have potentially meta-data of
 different types, so we use a sum type 'Either' whenever we combine
 two predicates with 'Data.Predicate.:||:'. For convenience a type-alias
 'Data.Predicate.:+:' is defined for 'Either', which allows simple infix
-notation. However, for the common case, where both predicates have
+notation. However, for the common case where both predicates have
 meta-data of the same type, there is often no need to distinguish which
 @OR@-branch was true. In this case, the 'Data.Predicate.:|:' combinator
 can be used.
 
 Finally there are 'Data.Predicate.Const' and 'Data.Predicate.Fail' to
-always evaluate to 'Data.Predicate.'T' or 'Data.Predicate.F' respectively.
+always evaluate to 'Data.Predicate.T' or 'Data.Predicate.F' respectively.
 
-For an example of how these operators are used, see below in 'Routes' below.
+As an example of how these operators are used, see below in 'Routes' section.
 -}
 
 {- $example
@@ -110,9 +110,10 @@ As mentioned before, Snap predicates usually fix the type @a@ from
 'Data.Predicate.Predicate' above to 'Snap.Core.Request'. The associated
 types 'Data.Predicate.FVal' and 'Data.Predicate.TVal' denote the meta-data
 types of the predicate. In this example, there is no useful information for
-the 'Data.Predicate.T'-case, so @TVal@ becomes '()'. The 'Data.Predicate.F'-case
-is set to the pair @(Word, Maybe ByteString)@ and indeed, if the predicate
-fails it sets the right HTTP status code (406) and some helpful message.
+the 'Data.Predicate.T'-case, so 'Data.Predicate.TVal' becomes '()'.
+The 'Data.Predicate.F'-case is set to the pair @(Word, Maybe ByteString)@
+and indeed, if the predicate fails it sets the right HTTP status code
+(406) and some helpful message.
 
 -}
 
@@ -131,7 +132,7 @@ someHandler = do
         'Data.Predicate.F' Nothing          -> ...
 @
 
-However another possibility is to augment route definitions via Snap.Core.route, e.g.
+However another possibility is to augment route definitions via 'Snap.Core.route', e.g.
 
 @
 sitemap :: 'Snap.Routes.Routes' Snap ()
@@ -161,7 +162,7 @@ invoked, or else Fail is used in some logical disjunction.
 Given the route and handler definitions above, one can then integrate
 with Snap via 'Snap.Routes.expandRoutes', which turns the
 'Snap.Routes.Routes' monad into a list of
-@'Snap.Core.MonadSnap' m => [(ByteString, m a)]@.
+@'Snap.Core.MonadSnap' m => [(ByteString, m ())]@.
 Additionally routes can be turned into Strings via 'Snap.Routes.showRoutes'.
 
 -}
