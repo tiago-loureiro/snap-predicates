@@ -132,7 +132,8 @@ someHandler = do
         'Data.Predicate.F' Nothing          -> ...
 @
 
-However another possibility is to augment route definitions via 'Snap.Core.route', e.g.
+However another possibility is to augment route definitions with the
+'Snap.Routes.Routes' monad to use them with 'Snap.Core.route', e.g.
 
 @
 sitemap :: 'Snap.Routes.Routes' Snap ()
@@ -154,7 +155,7 @@ handlerD :: 'Snap.Predicates.AcceptThrift' -> Snap ()
 handlerE :: () -> Snap ()
 @
 
-As usualy these type-declarations have to match, or else the code will
+As usually these type-declarations have to match, or else the code will
 not compile. One thing to note is that 'Data.Predicate.Fail' works with
 all handler signatures, which is safe, because the handler is never
 invoked, or else Fail is used in some logical disjunction.
