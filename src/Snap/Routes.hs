@@ -23,9 +23,7 @@ import Control.Applicative
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Either
-import Data.Monoid
 import Data.Predicate
-import Data.String
 import Data.Word
 import Snap.Core
 import Control.Monad.Trans.State.Strict (State)
@@ -76,17 +74,17 @@ trace   = addRoute TRACE
 options = addRoute OPTIONS
 connect = addRoute CONNECT
 
--- | Turn route definitions into string-like format.
--- Each route is represented as a 'ByteString'.
-showRoutes :: Routes m () -> [ByteString]
+-- | Turn route definitions into a list of 'String's.
+showRoutes :: Routes m () -> [String]
 showRoutes (Routes routes) =
     let rs = reverse $ State.execState routes []
     in flip map rs $ \x ->
         case _pred x of
-            Pack p _ -> show' (_method x) <> " " <> show' (_path x) <> " " <> show' p
-  where
-    show' :: Show a => a -> ByteString
-    show' = fromString . show
+            Pack p _ -> shows (_method x)
+                      . (' ':)
+                      . shows (_path x)
+                      . (' ':)
+                      . shows p $ ""
 
 -- | Turn route definitions into "snapable" format, i.e.
 -- Routes are grouped per path and selection evaluates routes

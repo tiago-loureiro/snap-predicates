@@ -20,11 +20,10 @@ import Snap.Core
 import Snap.Routes
 import Snap.Predicates
 import Snap.Http.Server
-import qualified Data.ByteString.Char8 as CS
 
 main :: IO ()
 main = do
-    mapM_ CS.putStrLn (showRoutes sitemap)
+    mapM_ putStrLn (showRoutes sitemap)
     quickHttpServe (route . expandRoutes $ sitemap)
 
 sitemap :: Routes Snap ()
