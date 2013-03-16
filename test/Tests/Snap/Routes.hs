@@ -11,6 +11,7 @@ import Data.Text (Text, strip)
 import Data.Text.Encoding
 import Snap.Core
 import Snap.Predicates
+import Snap.Predicates.MediaTypes
 import Snap.Routes
 import qualified Snap.Test as T
 import qualified Data.Map.Strict as M

@@ -6,6 +6,7 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 import Data.Predicate
 import Snap.Predicates
+import Snap.Predicates.MediaTypes
 import Snap.Test
 import qualified Data.Map.Strict as M
 
