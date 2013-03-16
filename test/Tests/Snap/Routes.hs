@@ -46,11 +46,9 @@ handlerB (_ :*: name :*: _) =
 
 handlerC :: AcceptThrift -> Snap ()
 handlerC _ = do
-    req <- getRequest
-    case apply (Param "bar" :&: Param "baz") req of
-        T (_ :*: _) -> return ()
-        F _         -> return ()
-    return ()
+    rq <- getRequest
+    with (Param "bar" :&: Param "baz") rq $ \(bar :*: _) ->
+        writeBS bar
 
 handlerD :: AcceptThrift -> Snap ()
 handlerD _ = return ()
