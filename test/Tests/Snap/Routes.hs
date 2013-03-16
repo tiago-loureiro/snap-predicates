@@ -7,11 +7,14 @@ import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Predicate
+import Data.Text (Text, strip)
+import Data.Text.Encoding
 import Snap.Core
 import Snap.Predicates
 import Snap.Routes
 import qualified Snap.Test as T
 import qualified Data.Map.Strict as M
+import qualified Data.Text as Text
 
 tests :: [Test]
 tests =
@@ -33,7 +36,7 @@ sitemap = do
 
     get  "/c" handlerC $ Fail (410, Just "Gone.")
 
-    post "/d" handlerD $ AcceptThrift
+    post "/d" handlerD $ AcceptThrift :&: ParamTrans "foo" (map (strip . decodeUtf8))
 
 handlerA :: AcceptJson :*: ByteString :*: ByteString -> Snap ()
 handlerA (_ :*: _ :*: _) = return ()
@@ -50,8 +53,8 @@ handlerC _ = do
     with (Param "bar" :&: Param "baz") rq $ \(bar :*: _) ->
         writeBS bar
 
-handlerD :: AcceptThrift -> Snap ()
-handlerD _ = return ()
+handlerD :: AcceptThrift :*: [Text] -> Snap ()
+handlerD (_ :*: txt) = writeText $ Text.intercalate ", " txt
 
 testEndpointA :: Snap () -> Assertion
 testEndpointA m = do
