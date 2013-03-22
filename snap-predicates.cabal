@@ -31,6 +31,9 @@ library
       , Snap.Predicates.Tutorial
       , Snap.Routes
 
+    other-modules:
+        Snap.Predicates.Parsers.Accept
+
     build-depends:
         base             >= 4   && < 5
       , transformers     >= 0.3
@@ -38,6 +41,7 @@ library
       , containers       >= 0.5
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
+      , attoparsec       >= 0.10
 
     other-extensions:
        BangPatterns
@@ -69,6 +73,7 @@ test-suite snap-predicates-test-suite
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
       , text             >= 0.11
+      , attoparsec       >= 0.10
 
       , HUnit                      >= 1.2
       , QuickCheck                 >= 2.3
