@@ -30,31 +30,31 @@ testSitemap = testCase "Sitemap" $ do
 sitemap :: Routes Snap ()
 sitemap = do
     get "/a" handlerA $
-        AcceptJson :&: (Param "name" :|: Param "nick") :&: Param "foo"
+        Accept Application Json :&: (Param "name" :|: Param "nick") :&: Param "foo"
 
     get "/b" handlerB $
-        AcceptJson :&: (Param "name" :||: Param "nick") :&: Param "foo"
+        Accept Application Json :&: (Param "name" :||: Param "nick") :&: Param "foo"
 
     get  "/c" handlerC $ Fail (410, Just "Gone.")
 
-    post "/d" handlerD $ AcceptThrift :&: ParamTrans "foo" (map (strip . decodeUtf8))
+    post "/d" handlerD $ Accept Application Json :&: ParamTrans "foo" (map (strip . decodeUtf8))
 
-handlerA :: AcceptJson :*: ByteString :*: ByteString -> Snap ()
+handlerA :: MediaType Application Json :*: ByteString :*: ByteString -> Snap ()
 handlerA (_ :*: _ :*: _) = return ()
 
-handlerB :: AcceptJson :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
+handlerB :: MediaType Application Json :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
 handlerB (_ :*: name :*: _) =
     case name of
         Left  _ -> return ()
         Right _ -> return ()
 
-handlerC :: AcceptThrift -> Snap ()
+handlerC :: MediaType Application Json -> Snap ()
 handlerC _ = do
     rq <- getRequest
     with (Param "bar" :&: Param "baz") rq $ \(bar :*: _) ->
         writeBS bar
 
-handlerD :: AcceptThrift :*: [Text] -> Snap ()
+handlerD :: MediaType Application Json :*: [Text] -> Snap ()
 handlerD (_ :*: txt) = writeText $ Text.intercalate ", " txt
 
 testEndpointA :: Snap () -> Assertion

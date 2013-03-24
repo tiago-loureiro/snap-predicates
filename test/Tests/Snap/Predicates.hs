@@ -21,32 +21,38 @@ tests =
 testAccept :: Test
 testAccept = testCase "Accept Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "x/y"
-    assertEqual "Matching Accept" (T ()) (apply (Accept "x/y") rq0)
+    let predicate = Accept (Typ "x") (SubTyp "y")
+    let true = T $ MediaType (Typ "x") (SubTyp "y") "1.0" []
+    assertEqual "Matching Accept" true (apply predicate rq0)
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 406"
-        (F $ Just (406, Just "Expected 'Accept: x/y'."))
-        (apply (Accept "x/y") rq1)
+        (F $ Just (406, Just "Expected 'Accept: \"x\"/\"y\"'."))
+        (apply predicate rq1)
 
 testAcceptJson :: Test
 testAcceptJson = testCase "AcceptJson Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "application/json"
-    assertEqual "Matching AcceptJson" (T AcceptJson) (apply AcceptJson rq0)
+    let predicate = Accept Application Json
+    let true = T $ MediaType Application Json "1.0" []
+    assertEqual "Matching AcceptJson" true (apply predicate rq0)
 
     rq1 <- buildRequest $ addHeader "Accept" "foo"
     assertEqual "Status Code 406"
         (F $ Just (406, Just "Expected 'Accept: application/json'."))
-        (apply AcceptJson rq1)
+        (apply predicate rq1)
 
 testAcceptThrift :: Test
 testAcceptThrift = testCase "AcceptThrift Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "application/x-thrift"
-    assertEqual "Matching AcceptThrift" (T AcceptThrift) (apply AcceptThrift rq0)
+    let predicate = Accept Application Thrift
+    let true = T $ MediaType Application Thrift "1.0" []
+    assertEqual "Matching AcceptThrift" true (apply predicate rq0)
 
     rq1 <- buildRequest $ addHeader "Accept" "application/json"
     assertEqual "Status Code 406"
         (F $ Just (406, Just "Expected 'Accept: application/x-thrift'."))
-        (apply AcceptThrift rq1)
+        (apply predicate rq1)
 
 testParam :: Test
 testParam = testCase "Param Predicate" $ do
