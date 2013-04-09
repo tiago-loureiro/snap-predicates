@@ -13,21 +13,10 @@ import qualified Data.Predicate.Env as E
 
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
-data Boolean f t =
-    F (Maybe f) -- ^ logical False with some meta-data
+data Boolean f t
+  = F (Maybe f) -- ^ logical False with some meta-data
   | T t         -- ^ logical True with some meta-data
   deriving (Eq, Show)
-
--- | The 'Predicate' class declares the function 'apply' which
--- evaluates the predicate against some value, returning a value
--- of type 'Boolean'.
--- Besides being parameterised over predicate type and predicate
--- parameter, the class is also parameterised over the actual types
--- of T's and F's meta-data.
-class Predicate p a where
-    type FVal p
-    type TVal p
-    apply :: p -> a -> StateT Env (Boolean (FVal p)) (TVal p)
 
 instance Monad (Boolean f) where
     return      = T
@@ -50,6 +39,17 @@ instance Alternative (Boolean f) where
     empty = mzero
     (<|>) = mplus
 
+-- | The 'Predicate' class declares the function 'apply' which
+-- evaluates the predicate against some value, returning a value
+-- of type 'Boolean'.
+-- Besides being parameterised over predicate type and predicate
+-- parameter, the class is also parameterised over the actual types
+-- of T's and F's meta-data.
+class Predicate p a where
+    type FVal p
+    type TVal p
+    apply :: p -> a -> State Env (Boolean (FVal p) (TVal p))
+
 -- | A 'Predicate' instance which always returns 'T' with
 -- the given value as T's meta-data.
 data Const f t where
@@ -58,7 +58,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = return a
+    apply (Const a) _     = return (T a)
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
@@ -71,7 +71,7 @@ data Fail f t where
 instance Predicate (Fail f t) a where
     type FVal (Fail f t) = f
     type TVal (Fail f t) = t
-    apply (Fail a) _     = StateT $ const (F $ Just a)
+    apply (Fail a) _     = return (F $ Just a)
 
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail " ++ show a
@@ -85,7 +85,13 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
   where
     type FVal (a :|: b) = FVal a
     type TVal (a :|: b) = TVal a
-    apply (a :|: b) r   = apply a r <|> apply b r
+    apply (a :|: b) r   = StateT $ \e0 ->
+        let (ra, e1) = runState (apply a r) e0
+            (rb, e2) = runState (apply b r) e1
+        in case (ra, rb) of
+               (T t,   _) -> return (T t, e2)
+               (F _, T t) -> return (T t, e2)
+               (F _, F f) -> return (F f, e2)
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
@@ -101,7 +107,13 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
   where
     type FVal (a :||: b) = FVal a
     type TVal (a :||: b) = TVal a :+: TVal b
-    apply (a :||: b) r   = (Left <$> apply a r) <|> (Right <$> apply b r)
+    apply (a :||: b) r   = StateT $ \e0 ->
+        let (ra, e1) = runState (apply a r) e0
+            (rb, e2) = runState (apply b r) e1
+        in case (ra, rb) of
+               (T t,   _) -> return (T (Left  t), e2)
+               (F _, T t) -> return (T (Right t), e2)
+               (F _, F f) -> return (F f, e2)
 
 instance (Show a, Show b) => Show (a :||: b) where
     show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
@@ -117,7 +129,13 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
   where
     type FVal (a :&: b) = FVal a
     type TVal (a :&: b) = TVal a :*: TVal b
-    apply (a :&: b) r   = (:*:) <$> apply a r <*> apply b r
+    apply (a :&: b) r   = StateT $ \e0 ->
+        let (ra, e1) = runState (apply a r) e0
+            (rb, e2) = runState (apply b r) e1
+        in case (ra, rb) of
+               (T ta, T tb) -> return (T (ta :*: tb), e2)
+               (T  _, F  f) -> return (F f, e2)
+               (F  f, _)    -> return (F f, e2)
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"
@@ -126,6 +144,6 @@ instance (Show a, Show b) => Show (a :&: b) where
 -- applied to the test value 'a' evaluates to 'T'.
 with :: (Monad m, Predicate p a) => p -> a -> (TVal p -> m ()) -> m ()
 with p a f =
-    case evalStateT (apply p a) E.empty of
+    case evalState (apply p a) E.empty of
         T x -> f x
         _   -> return ()

@@ -35,7 +35,7 @@ sitemap = do
     get "/b" handlerB $
         Accept Application Json :&: (Param "name" :||: Param "nick") :&: Param "foo"
 
-    get  "/c" handlerC $ Fail (410, Just "Gone.")
+    get "/c" handlerC $ Fail (410, Just "Gone.")
 
     post "/d" handlerD $ Accept Application Json :&: ParamTrans "foo" (map (strip . decodeUtf8))
 
@@ -75,4 +75,3 @@ testEndpointA m = do
     let rq3 = T.get "/a" (M.fromList [("name", ["x"]), ("foo", ["y"])]) >>
               T.addHeader "Accept" "application/json"
     T.runHandler rq3 m >>= T.assertSuccess
-

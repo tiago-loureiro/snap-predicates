@@ -7,7 +7,6 @@ module Snap.Predicates
   )
 where
 
-import Control.Monad.State.Strict
 import Data.ByteString (ByteString)
 import Data.Monoid
 import Data.Typeable
@@ -23,13 +22,10 @@ data Param = Param ByteString deriving Eq
 instance Predicate Param Request where
     type FVal Param = (Word, Maybe ByteString)
     type TVal Param = ByteString
-    apply (Param x) r = do
-        value <- E.lookup ("param:" <> x)
-        case value of
-            Just v  -> return v
-            Nothing -> case params r x of
-                []    -> StateT $ const (F $ Just (400, Just $ "Expected parameter '" <> x <> "'."))
-                (v:_) -> E.insert ("param:" <> x) v >> return v
+    apply (Param x) r =
+        case params r x of
+            []    -> return (F $ Just (400, Just $ "Expected parameter '" <> x <> "'."))
+            (v:_) -> return (T v)
 
 instance Show Param where
     show (Param x) = "Param: " ++ show x
@@ -42,14 +38,14 @@ data ParamTrans a = ParamTrans ByteString ([ByteString] -> a)
 instance Typeable a => Predicate (ParamTrans a) Request where
     type FVal (ParamTrans a) = (Word, Maybe ByteString)
     type TVal (ParamTrans a) = a
-    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work return
+    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T)
       where
         work = case params r x of
-            [] -> StateT $ const (F $ Just (400, Just $ "Expected parameter '" <> x <> "'."))
+            [] -> return (F (Just (400, Just $ "Expected parameter '" <> x <> "'.")))
             vs -> do
                 let result = f vs
                 E.insert ("paramtrans:" <> x) result
-                return result
+                return (T result)
 
 instance Show (ParamTrans a) where
     show (ParamTrans x _) = "ParamTrans: " ++ show x

@@ -21,7 +21,7 @@ where
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.State.Strict (runStateT)
+import Control.Monad.State.Strict (runState)
 import Data.ByteString (ByteString)
 import Data.Either
 import Data.Predicate
@@ -121,22 +121,18 @@ select g = do
     evalAll :: MonadSnap m => [Route m] -> m ()
     evalAll rs = do
         req <- getRequest
-        let (n, y) = partitionEithers $ eval1 req E.empty rs
+        let (n, y) = partitionEithers . snd $ L.foldl' (eval req) (E.empty, []) rs
         if null y
             then respond (L.head n)
             else L.head y
 
-    eval1 :: MonadSnap m => Request -> Env -> [Route m] -> [Either Error (m ())]
-    eval1 _  _ []     = []
-    eval1 rq e (r:rs) = let (e', x) = eval rq e r in x : eval1 rq e' rs
-
-    eval :: MonadSnap m => Request -> Env -> Route m -> (Env, Either Error (m ()))
-    eval rq e r = case _pred r of
+    eval :: MonadSnap m => Request -> (Env, [Either Error (m ())]) -> Route m -> (Env, [Either Error (m ())])
+    eval rq (e, rs) r = case _pred r of
         Pack p h ->
-            case runStateT (apply p rq) e of
-                F Nothing  -> (e, Left (500, Nothing))
-                F (Just m) -> (e, Left m)
-                T (v, e')  -> (e', Right (h v))
+            case runState (apply p rq) e of
+                (F Nothing, e')  -> (e', Left (500, Nothing) : rs)
+                (F (Just m), e') -> (e', Left m : rs)
+                (T v, e')        -> (e', Right (h v) : rs)
 
 respond :: MonadSnap m => Error -> m ()
 respond (i, msg) = do

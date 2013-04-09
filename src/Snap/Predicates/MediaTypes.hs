@@ -23,7 +23,6 @@ module Snap.Predicates.MediaTypes
 where
 
 import Control.Monad
-import Control.Monad.State.Strict
 import Data.ByteString (ByteString)
 import Data.List (sortBy)
 import Data.Maybe
@@ -58,8 +57,8 @@ instance (Type t, SubType s) => Predicate (Accept t s) Request where
     apply (Accept x y) r = do
         mtypes <- E.lookup "accept" >>= maybe readMediaTypes return
         case mediaType x y mtypes of
-               Just m  -> return m
-               Nothing -> StateT $ const (F $ Just (406, Just message))
+               Just m  -> return (T m)
+               Nothing -> return (F $ Just (406, Just message))
       where
         q a b = A.medQuality b `compare` A.medQuality a
 
