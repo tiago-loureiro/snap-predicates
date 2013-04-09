@@ -7,6 +7,9 @@ module Data.Predicate where
 
 import Control.Applicative hiding (Const)
 import Control.Monad
+import Control.Monad.State.Strict
+import Data.Predicate.Env (Env)
+import qualified Data.Predicate.Env as E
 
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
@@ -24,7 +27,7 @@ data Boolean f t =
 class Predicate p a where
     type FVal p
     type TVal p
-    apply :: p -> a -> Boolean (FVal p) (TVal p)
+    apply :: p -> a -> StateT Env (Boolean (FVal p)) (TVal p)
 
 instance Monad (Boolean f) where
     return      = T
@@ -55,7 +58,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = T a
+    apply (Const a) _     = return a
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
@@ -68,7 +71,7 @@ data Fail f t where
 instance Predicate (Fail f t) a where
     type FVal (Fail f t) = f
     type TVal (Fail f t) = t
-    apply (Fail a) _     = F $ Just a
+    apply (Fail a) _     = StateT $ const (F $ Just a)
 
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail " ++ show a
@@ -123,6 +126,6 @@ instance (Show a, Show b) => Show (a :&: b) where
 -- applied to the test value 'a' evaluates to 'T'.
 with :: (Monad m, Predicate p a) => p -> a -> (TVal p -> m ()) -> m ()
 with p a f =
-    case apply p a of
+    case evalStateT (apply p a) E.empty of
         T x -> f x
         _   -> return ()

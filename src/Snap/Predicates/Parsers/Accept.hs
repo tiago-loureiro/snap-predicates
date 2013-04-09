@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, DeriveDataTypeable #-}
 module Snap.Predicates.Parsers.Accept
   ( MediaType (..)
   , parseMediaTypes
@@ -8,6 +8,7 @@ where
 import Control.Applicative
 import Data.Attoparsec
 import Data.ByteString (ByteString)
+import Data.Typeable
 import Snap.Predicates.Parsers.Shared
 
 data MediaType = MediaType
@@ -15,7 +16,7 @@ data MediaType = MediaType
   , medSubtype :: !ByteString
   , medQuality :: !ByteString
   , medParams  :: ![(ByteString, ByteString)]
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Typeable)
 
 parseMediaTypes :: ByteString -> [MediaType]
 parseMediaTypes = either (const []) id . parseOnly mediaTypes

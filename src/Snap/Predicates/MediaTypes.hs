@@ -23,6 +23,7 @@ module Snap.Predicates.MediaTypes
 where
 
 import Control.Monad
+import Control.Monad.State.Strict
 import Data.ByteString (ByteString)
 import Data.List (sortBy)
 import Data.Maybe
@@ -32,6 +33,7 @@ import Data.Word
 import Data.Predicate
 import Snap.Core hiding (headers)
 import Snap.Predicates.Internal
+import qualified Data.Predicate.Env as E
 import qualified Snap.Predicates.Parsers.Accept as A
 
 class (Show a, Eq a) => Type a where
@@ -53,13 +55,19 @@ data Accept t s = Accept t s deriving Eq
 instance (Type t, SubType s) => Predicate (Accept t s) Request where
     type FVal (Accept t s) = (Word, Maybe ByteString)
     type TVal (Accept t s) = MediaType t s
-    apply (Accept x y) r =
-        let mtypes = sortBy q . concat . map A.parseMediaTypes $ headers r "accept" in
+    apply (Accept x y) r = do
+        mtypes <- E.lookup "accept" >>= maybe readMediaTypes return
         case mediaType x y mtypes of
-               Just m  -> T m
-               Nothing -> F $ Just (406, Just message)
+               Just m  -> return m
+               Nothing -> StateT $ const (F $ Just (406, Just message))
       where
         q a b = A.medQuality b `compare` A.medQuality a
+
+        readMediaTypes = do
+            let mtypes = sortBy q . concat . map A.parseMediaTypes $ headers r "accept"
+            E.insert "accept" mtypes
+            return mtypes
+
         message = "Expected 'Accept: "
                     <> fromString (show x)
                     <> "/"

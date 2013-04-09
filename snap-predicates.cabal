@@ -26,6 +26,7 @@ library
 
     exposed-modules:
         Data.Predicate
+      , Data.Predicate.Env
       , Snap.Predicates
       , Snap.Predicates.MediaTypes
       , Snap.Predicates.Tutorial
@@ -38,6 +39,7 @@ library
     build-depends:
         base             >= 4   && < 5
       , transformers     >= 0.3
+      , monads-tf        >= 0.1
       , bytestring       >= 0.9
       , containers       >= 0.5
       , case-insensitive >= 1.0
@@ -69,6 +71,7 @@ test-suite snap-predicates-test-suite
     build-depends:
         base             >= 4   && < 5
       , transformers     >= 0.3
+      , monads-tf        >= 0.1
       , bytestring       >= 0.9
       , containers       >= 0.5
       , case-insensitive >= 1.0
