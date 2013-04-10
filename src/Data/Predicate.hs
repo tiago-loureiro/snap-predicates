@@ -5,8 +5,6 @@
 {-# LANGUAGE FlexibleInstances     #-}
 module Data.Predicate where
 
-import Control.Applicative hiding (Const)
-import Control.Monad
 import Control.Monad.State.Strict
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
@@ -17,27 +15,6 @@ data Boolean f t
   = F (Maybe f) -- ^ logical False with some meta-data
   | T t         -- ^ logical True with some meta-data
   deriving (Eq, Show)
-
-instance Monad (Boolean f) where
-    return      = T
-    (T x) >>= g = g x
-    (F x) >>= _ = F x
-
-instance MonadPlus (Boolean f) where
-    mzero           = F Nothing
-    (F _) `mplus` b = b
-    b     `mplus` _ = b
-
-instance Functor (Boolean f) where
-    fmap = liftM
-
-instance Applicative (Boolean f) where
-    pure  = return
-    (<*>) = ap
-
-instance Alternative (Boolean f) where
-    empty = mzero
-    (<|>) = mplus
 
 -- | The 'Predicate' class declares the function 'apply' which
 -- evaluates the predicate against some value, returning a value
