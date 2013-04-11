@@ -10,3 +10,7 @@ headers rq name = maybe [] id . getHeaders (mk name) $ rq
 
 params :: Request -> ByteString -> [ByteString]
 params rq name = maybe [] id . M.lookup name . rqParams $ rq
+
+safeHead :: [a] -> Maybe a
+safeHead []    = Nothing
+safeHead (h:_) = Just h

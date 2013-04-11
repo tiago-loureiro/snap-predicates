@@ -121,15 +121,27 @@ select g = do
         let (n, y) = partitionEithers . snd $ foldl' (eval req) (E.empty, []) rs
         if null y
             then respond (L.head n)
-            else L.head y
+            else closest y
 
-    eval :: MonadSnap m => Request -> (Env, [Either Error (m ())]) -> Route m -> (Env, [Either Error (m ())])
+    eval :: MonadSnap m => Request -> (Env, [Either Error (Delta, m ())]) -> Route m -> (Env, [Either Error (Delta, m ())])
     eval rq (e, rs) r =
         case _pred r of
             Pack p h ->
                 case runState (apply p rq) e of
-                    (F m, e') -> (e', Left m : rs)
-                    (T v, e') -> (e', Right (h v) : rs)
+                    (F   m, e') -> (e', Left m : rs)
+                    (T d v, e') -> (e', Right (d, (h v)) : rs)
+
+    closest :: [(Delta, m ())] -> m ()
+    closest xs =
+        let (exact, fuzzy) = partition (null . fst) xs
+            categories     = nub $ concatMap (map fst . fst) fuzzy
+            allDeltas      = map (\(d, m) -> (deltaSum categories d, m)) fuzzy
+        in if null exact
+               then snd $ minimumBy (\(x, _) (y, _) -> x `compare` y) allDeltas
+               else snd $ L.head exact
+
+    deltaSum :: [String] -> Delta -> Double
+    deltaSum cs = sum . map snd . filter (flip elem cs . fst)
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do

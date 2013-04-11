@@ -54,10 +54,10 @@ data Accept t s = Accept t s deriving Eq
 instance (Type t, SubType s) => Predicate (Accept t s) Request where
     type FVal (Accept t s) = Error
     type TVal (Accept t s) = MediaType t s
-    apply (Accept x y) r = do
+    apply (Accept x y) r   = do
         mtypes <- E.lookup "accept" >>= maybe readMediaTypes return
         case mediaType x y mtypes of
-               Just m  -> return (T m)
+               Just m  -> return (T (delta m) m)
                Nothing -> return (F (err 406 message))
       where
         q a b = A.medQuality b `compare` A.medQuality a
@@ -73,18 +73,17 @@ instance (Type t, SubType s) => Predicate (Accept t s) Request where
                     <> fromString (show y)
                     <> "'."
 
+        delta m = [("media", 1.0 - (_quality m))]
+
 instance (Show t, Show s) => Show (Accept t s) where
     show (Accept t s) = "Accept: " ++ show t ++ "/" ++ show s
 
 mediaType :: (Type t, SubType s) => t -> s -> [A.MediaType] -> Maybe (MediaType t s)
-mediaType t s = head' . mapMaybe (\m -> do
+mediaType t s = safeHead . mapMaybe (\m -> do
     t' <- if A.medType    m == "*" then Just t else toType t    (A.medType m)
     s' <- if A.medSubtype m == "*" then Just s else toSubType s (A.medSubtype m)
     guard (t == t' && s == s')
     return $ MediaType t s (A.medQuality m) (A.medParams m))
-  where
-    head' []    = Nothing
-    head' (h:_) = Just h
 
 -- | Generic media-type.
 data Typ = Typ ByteString deriving Eq

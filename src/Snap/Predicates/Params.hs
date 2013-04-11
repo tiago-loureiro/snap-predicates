@@ -25,7 +25,7 @@ instance Predicate Param Request where
     apply (Param x) r =
         case params r x of
             []    -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
-            (v:_) -> return (T v)
+            (v:_) -> return (T [] v)
 
 instance Show Param where
     show (Param x) = "Param: " ++ show x
@@ -38,14 +38,14 @@ data ParamTrans a = ParamTrans ByteString ([ByteString] -> a)
 instance Typeable a => Predicate (ParamTrans a) Request where
     type FVal (ParamTrans a) = Error
     type TVal (ParamTrans a) = a
-    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T)
+    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T [])
       where
         work = case params r x of
             [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
             vs -> do
                 let result = f vs
                 E.insert ("paramtrans:" <> x) result
-                return (T result)
+                return (T [] result)
 
 instance Show (ParamTrans a) where
     show (ParamTrans x _) = "ParamTrans: " ++ show x

@@ -28,7 +28,7 @@ testAccept :: Test
 testAccept = testCase "Accept Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "x/y"
     let predicate = Accept (Typ "x") (SubTyp "y")
-    let true = T $ MediaType (Typ "x") (SubTyp "y") 1.0 []
+    let true = T [("media", 0.0)] $ MediaType (Typ "x") (SubTyp "y") 1.0 []
     assertEqual "Matching Accept" true (eval predicate rq0)
 
     rq1 <- buildRequest $ get "/" M.empty
@@ -40,7 +40,7 @@ testAcceptJson :: Test
 testAcceptJson = testCase "AcceptJson Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "application/json"
     let predicate = Accept Application Json
-    let true = T $ MediaType Application Json 1.0 []
+    let true = T [("media", 0.0)] $ MediaType Application Json 1.0 []
     assertEqual "Matching AcceptJson" true (eval predicate rq0)
 
     rq1 <- buildRequest $ addHeader "Accept" "foo"
@@ -52,7 +52,7 @@ testAcceptThrift :: Test
 testAcceptThrift = testCase "AcceptThrift Predicate" $ do
     rq0 <- buildRequest $ addHeader "Accept" "application/x-thrift"
     let predicate = Accept Application Thrift
-    let true = T $ MediaType Application Thrift 1.0 []
+    let true = T [("media", 0.0)] $ MediaType Application Thrift 1.0 []
     assertEqual "Matching AcceptThrift" true (eval predicate rq0)
 
     rq1 <- buildRequest $ addHeader "Accept" "application/json"
@@ -63,7 +63,7 @@ testAcceptThrift = testCase "AcceptThrift Predicate" $ do
 testParam :: Test
 testParam = testCase "Param Predicate" $ do
     rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
-    assertEqual "Matching Param" (T "y") (eval (Param "x") rq0)
+    assertEqual "Matching Param" (T [] "y") (eval (Param "x") rq0)
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 400"

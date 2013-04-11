@@ -11,11 +11,13 @@ import Control.Monad.State.Strict
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
 
+type Delta = [(String, Double)]
+
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
 data Boolean f t
-  = F f -- ^ logical False with some meta-data
-  | T t -- ^ logical True with some meta-data
+  = F f       -- ^ logical False with some meta-data
+  | T Delta t -- ^ logical True with some meta-data
   deriving (Eq, Show)
 
 -- | The 'Predicate' class declares the function 'apply' which
@@ -37,7 +39,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = return (T a)
+    apply (Const a) _     = return (T [] a)
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
@@ -66,9 +68,9 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
     type TVal (a :|: b) = TVal a
     apply (a :|: b) r   = or <$> apply a r <*> apply b r
       where
-        or (T t) _     = T t
-        or (F _) (T t) = T t
-        or (F _) (F f) = F f
+        or (T d t) _       = T d t
+        or (F   _) (T d t) = T d t
+        or (F   _) (F   f) = F f
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
@@ -86,9 +88,9 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
     type TVal (a :||: b) = TVal a :+: TVal b
     apply (a :||: b) r   = or <$> apply a r <*> apply b r
       where
-        or (T t) _     = T (Left  t)
-        or (F _) (T t) = T (Right t)
-        or (F _) (F f) = F f
+        or (T d t) _       = T d (Left  t)
+        or (F   _) (T d t) = T d (Right t)
+        or (F   _) (F   f) = F f
 
 instance (Show a, Show b) => Show (a :||: b) where
     show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
@@ -106,9 +108,9 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
     type TVal (a :&: b) = TVal a :*: TVal b
     apply (a :&: b) r   = and <$> apply a r <*> apply b r
       where
-        and (T x) (T y) = T (x :*: y)
-        and (T _) (F f) = F f
-        and (F f) _     = F f
+        and (T d x) (T w y) = T (d ++ w) (x :*: y)
+        and (T _ _) (F   f) = F f
+        and (F   f) _       = F f
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"
@@ -118,5 +120,5 @@ instance (Show a, Show b) => Show (a :&: b) where
 with :: (Monad m, Predicate p a) => p -> a -> (TVal p -> m ()) -> m ()
 with p a f =
     case evalState (apply p a) E.empty of
-        T x -> f x
-        _   -> return ()
+        T _ x -> f x
+        _     -> return ()

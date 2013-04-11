@@ -2,6 +2,7 @@
 module Tests.Snap.Routes (tests) where
 
 import Control.Applicative hiding (Const)
+import Control.Monad.IO.Class
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
@@ -20,7 +21,9 @@ import qualified Data.Text as Text
 
 tests :: [Test]
 tests =
-    [ testSitemap ]
+    [ testSitemap
+    , testMedia
+    ]
 
 testSitemap :: Test
 testSitemap = testCase "Sitemap" $ do
@@ -76,3 +79,29 @@ testEndpointA m = do
     let rq3 = T.get "/a" (M.fromList [("name", ["x"]), ("foo", ["y"])]) >>
               T.addHeader "Accept" "application/json"
     T.runHandler rq3 m >>= T.assertSuccess
+
+-- Media Selection Tests:
+
+testMedia :: Test
+testMedia = testCase "Media Selection" $ do
+    let [(_, h)] = expandRoutes sitemapMedia
+    expectMedia "application/json;q=0.3, application/x-thrift;q=0.7" "application/x-thrift" h
+    expectMedia "application/json;q=0.7, application/x-thrift;q=0.3" "application/json" h
+
+sitemapMedia :: Routes Snap ()
+sitemapMedia = do
+    get "/media" handlerJson   $ Accept Application Json
+    get "/media" handlerThrift $ Accept Application Thrift
+
+handlerJson :: MediaType Application Json -> Snap ()
+handlerJson _ = writeBS "application/json"
+
+handlerThrift :: MediaType Application Thrift -> Snap ()
+handlerThrift _ = writeBS "application/x-thrift"
+
+expectMedia :: ByteString -> ByteString -> Snap () -> Assertion
+expectMedia hdr res m = do
+    let rq0 = T.get "/media" M.empty >>
+              T.addHeader "Accept" hdr
+    txt0 <- T.runHandler rq0 m >>= liftIO . T.getResponseBody
+    assertEqual "media type" res txt0
