@@ -44,7 +44,7 @@ class (Show a, Eq a) => SubType a where
 data MediaType t s = MediaType
   { _type    :: !t
   , _subtype :: !s
-  , _quality :: !ByteString
+  , _quality :: !Double
   , _params  :: ![(ByteString, ByteString)]
   } deriving (Eq, Show)
 

@@ -7,14 +7,17 @@ where
 
 import Control.Applicative
 import Data.Attoparsec
+import Data.Attoparsec.Text (double)
 import Data.ByteString (ByteString)
+import Data.Text.Encoding
 import Data.Typeable
 import Snap.Predicates.Parsers.Shared
+import qualified Data.Attoparsec.Text as T
 
 data MediaType = MediaType
   { medType    :: !ByteString
   , medSubtype :: !ByteString
-  , medQuality :: !ByteString
+  , medQuality :: !Double
   , medParams  :: ![(ByteString, ByteString)]
   } deriving (Eq, Show, Typeable)
 
@@ -28,9 +31,9 @@ mediaType :: Parser MediaType
 mediaType = toMediaType <$> trim typ <*> (chr '/' *> trim subtyp) <*> params
   where
     toMediaType t s p =
-        case lookup "q" p of
+        case lookup "q" p >>= toDouble of
             Just q  -> MediaType t s q (filter ((/= "q") . fst) p)
-            Nothing -> MediaType t s "1.0" p
+            Nothing -> MediaType t s 1.0 p
 
 params :: Parser [(ByteString, ByteString)]
 params = (trim (chr ';') *> (element `sepBy` trim (chr ';'))) <|> return []
@@ -48,3 +51,12 @@ key = do
         else takeTill (oneof "= ")
 
 val = takeTill (oneof ",; ")
+
+toDouble :: ByteString -> Maybe Double
+toDouble bs = do
+    txt <- toMaybe (decodeUtf8' bs)
+    dec <- toMaybe (T.parseOnly double txt)
+    return dec
+  where
+    toMaybe (Right x) = Just x
+    toMaybe (Left  _) = Nothing

@@ -42,6 +42,7 @@ library
       , transformers     >= 0.3
       , monads-tf        >= 0.1
       , bytestring       >= 0.9
+      , text             >= 0.11
       , containers       >= 0.5
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
@@ -74,6 +75,7 @@ test-suite snap-predicates-test-suite
       , transformers     >= 0.3
       , monads-tf        >= 0.1
       , bytestring       >= 0.9
+      , text             >= 0.11
       , containers       >= 0.5
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
