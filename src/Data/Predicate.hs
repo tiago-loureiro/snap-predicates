@@ -14,8 +14,8 @@ import qualified Data.Predicate.Env as E
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
 data Boolean f t
-  = F (Maybe f) -- ^ logical False with some meta-data
-  | T t         -- ^ logical True with some meta-data
+  = F f -- ^ logical False with some meta-data
+  | T t -- ^ logical True with some meta-data
   deriving (Eq, Show)
 
 -- | The 'Predicate' class declares the function 'apply' which
@@ -50,7 +50,7 @@ data Fail f t where
 instance Predicate (Fail f t) a where
     type FVal (Fail f t) = f
     type TVal (Fail f t) = t
-    apply (Fail a) _     = return (F $ Just a)
+    apply (Fail a) _     = return (F a)
 
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail " ++ show a

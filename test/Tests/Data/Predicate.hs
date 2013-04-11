@@ -28,7 +28,7 @@ testConst :: Const Int Char -> Bool
 testConst x@(Const c) = eval x () == T c
 
 testFail :: Fail Int Char -> Bool
-testFail x@(Fail c) = eval x () == F (Just c)
+testFail x@(Fail c) = eval x () == F c
 
 testAnd :: Rand -> Rand -> Bool
 testAnd a@(Rand (T x)) b@(Rand (T y)) = eval (a :&: b) () == T (x :*: y)
@@ -58,7 +58,7 @@ instance Predicate Rand a where
 instance Arbitrary (Boolean Int Char) where
     arbitrary =
         oneof [ T <$> (arbitrary :: Gen Char)
-              , F <$> (arbitrary :: Gen (Maybe Int))
+              , F <$> (arbitrary :: Gen Int)
               ]
 
 instance Arbitrary (Const Int Char) where

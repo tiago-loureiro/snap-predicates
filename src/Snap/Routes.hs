@@ -26,14 +26,12 @@ import Data.ByteString (ByteString)
 import Data.Either
 import Data.Predicate
 import Data.Predicate.Env (Env)
-import Data.Word
 import Snap.Core
+import Snap.Predicates
 import Control.Monad.Trans.State.Strict (State)
 import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 import qualified Data.Predicate.Env as E
-
-type Error = (Word, Maybe ByteString)
 
 data Pack m where
     Pack :: (Show p, Predicate p Request, FVal p ~ Error)
@@ -112,7 +110,7 @@ select :: MonadSnap m => [Route m] -> m ()
 select g = do
     ms <- filterM byMethod g
     if L.null ms
-        then respond (405, Nothing)
+        then respond (Error 405 Nothing)
         else evalAll ms
   where
     byMethod :: MonadSnap m => Route m -> m Bool
@@ -127,16 +125,16 @@ select g = do
             else L.head y
 
     eval :: MonadSnap m => Request -> (Env, [Either Error (m ())]) -> Route m -> (Env, [Either Error (m ())])
-    eval rq (e, rs) r = case _pred r of
-        Pack p h ->
-            case runState (apply p rq) e of
-                (F Nothing, e')  -> (e', Left (500, Nothing) : rs)
-                (F (Just m), e') -> (e', Left m : rs)
-                (T v, e')        -> (e', Right (h v) : rs)
+    eval rq (e, rs) r =
+        case _pred r of
+            Pack p h ->
+                case runState (apply p rq) e of
+                    (F m, e') -> (e', Left m : rs)
+                    (T v, e') -> (e', Right (h v) : rs)
 
 respond :: MonadSnap m => Error -> m ()
-respond (i, msg) = do
+respond e = do
     putResponse . clearContentLength
-                . setResponseCode (fromIntegral i)
+                . setResponseCode (fromIntegral . _status $ e)
                 $ emptyResponse
-    maybe (return ()) writeBS msg
+    maybe (return ()) writeBS (_message e)

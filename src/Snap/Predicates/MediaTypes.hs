@@ -28,9 +28,9 @@ import Data.List (sortBy)
 import Data.Maybe
 import Data.Monoid hiding (All)
 import Data.String
-import Data.Word
 import Data.Predicate
 import Snap.Core hiding (headers)
+import Snap.Predicates
 import Snap.Predicates.Internal
 import qualified Data.Predicate.Env as E
 import qualified Snap.Predicates.Parsers.Accept as A
@@ -52,13 +52,13 @@ data MediaType t s = MediaType
 data Accept t s = Accept t s deriving Eq
 
 instance (Type t, SubType s) => Predicate (Accept t s) Request where
-    type FVal (Accept t s) = (Word, Maybe ByteString)
+    type FVal (Accept t s) = Error
     type TVal (Accept t s) = MediaType t s
     apply (Accept x y) r = do
         mtypes <- E.lookup "accept" >>= maybe readMediaTypes return
         case mediaType x y mtypes of
                Just m  -> return (T m)
-               Nothing -> return (F $ Just (406, Just message))
+               Nothing -> return (F (err 406 message))
       where
         q a b = A.medQuality b `compare` A.medQuality a
 

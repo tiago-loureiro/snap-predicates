@@ -7,6 +7,7 @@ import Test.HUnit hiding (Test)
 import Control.Monad.State.Strict hiding (get)
 import Data.Predicate
 import Snap.Predicates
+import Snap.Predicates.Params
 import Snap.Predicates.MediaTypes
 import Snap.Test
 import qualified Data.Map.Strict as M
@@ -32,7 +33,7 @@ testAccept = testCase "Accept Predicate" $ do
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 406"
-        (F $ Just (406, Just "Expected 'Accept: \"x\"/\"y\"'."))
+        (F (err 406 ("Expected 'Accept: \"x\"/\"y\"'.")))
         (eval predicate rq1)
 
 testAcceptJson :: Test
@@ -44,7 +45,7 @@ testAcceptJson = testCase "AcceptJson Predicate" $ do
 
     rq1 <- buildRequest $ addHeader "Accept" "foo"
     assertEqual "Status Code 406"
-        (F $ Just (406, Just "Expected 'Accept: application/json'."))
+        (F (err 406 ("Expected 'Accept: application/json'.")))
         (eval predicate rq1)
 
 testAcceptThrift :: Test
@@ -56,7 +57,7 @@ testAcceptThrift = testCase "AcceptThrift Predicate" $ do
 
     rq1 <- buildRequest $ addHeader "Accept" "application/json"
     assertEqual "Status Code 406"
-        (F $ Just (406, Just "Expected 'Accept: application/x-thrift'."))
+        (F (err 406 ("Expected 'Accept: application/x-thrift'.")))
         (eval predicate rq1)
 
 testParam :: Test
@@ -66,5 +67,5 @@ testParam = testCase "Param Predicate" $ do
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 400"
-        (F $ Just (400, Just "Expected parameter 'x'."))
+        (F (err 400 ("Expected parameter 'x'.")))
         (eval (Param "x") rq1)

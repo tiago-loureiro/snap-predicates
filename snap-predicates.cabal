@@ -28,6 +28,7 @@ library
         Data.Predicate
       , Data.Predicate.Env
       , Snap.Predicates
+      , Snap.Predicates.Params
       , Snap.Predicates.MediaTypes
       , Snap.Predicates.Tutorial
       , Snap.Routes

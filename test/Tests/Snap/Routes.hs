@@ -11,6 +11,7 @@ import Data.Text (Text, strip)
 import Data.Text.Encoding
 import Snap.Core
 import Snap.Predicates
+import Snap.Predicates.Params
 import Snap.Predicates.MediaTypes
 import Snap.Routes
 import qualified Snap.Test as T
@@ -35,7 +36,7 @@ sitemap = do
     get "/b" handlerB $
         Accept Application Json :&: (Param "name" :||: Param "nick") :&: Param "foo"
 
-    get "/c" handlerC $ Fail (410, Just "Gone.")
+    get "/c" handlerC $ Fail (err 410 "Gone.")
 
     post "/d" handlerD $ Accept Application Json :&: ParamTrans "foo" (map (strip . decodeUtf8))
 
