@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleInstances     #-}
 module Data.Predicate where
 
+import Prelude hiding (and, or)
+import Control.Applicative hiding (Const)
 import Control.Monad.State.Strict
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
@@ -62,13 +64,11 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
   where
     type FVal (a :|: b) = FVal a
     type TVal (a :|: b) = TVal a
-    apply (a :|: b) r   = StateT $ \e0 ->
-        let (ra, e1) = runState (apply a r) e0
-            (rb, e2) = runState (apply b r) e1
-        in case (ra, rb) of
-               (T t,   _) -> return (T t, e2)
-               (F _, T t) -> return (T t, e2)
-               (F _, F f) -> return (F f, e2)
+    apply (a :|: b) r   = or <$> apply a r <*> apply b r
+      where
+        or (T t) _     = T t
+        or (F _) (T t) = T t
+        or (F _) (F f) = F f
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
@@ -84,13 +84,11 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
   where
     type FVal (a :||: b) = FVal a
     type TVal (a :||: b) = TVal a :+: TVal b
-    apply (a :||: b) r   = StateT $ \e0 ->
-        let (ra, e1) = runState (apply a r) e0
-            (rb, e2) = runState (apply b r) e1
-        in case (ra, rb) of
-               (T t,   _) -> return (T (Left  t), e2)
-               (F _, T t) -> return (T (Right t), e2)
-               (F _, F f) -> return (F f, e2)
+    apply (a :||: b) r   = or <$> apply a r <*> apply b r
+      where
+        or (T t) _     = T (Left  t)
+        or (F _) (T t) = T (Right t)
+        or (F _) (F f) = F f
 
 instance (Show a, Show b) => Show (a :||: b) where
     show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
@@ -106,13 +104,11 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
   where
     type FVal (a :&: b) = FVal a
     type TVal (a :&: b) = TVal a :*: TVal b
-    apply (a :&: b) r   = StateT $ \e0 ->
-        let (ra, e1) = runState (apply a r) e0
-            (rb, e2) = runState (apply b r) e1
-        in case (ra, rb) of
-               (T ta, T tb) -> return (T (ta :*: tb), e2)
-               (T  _, F  f) -> return (F f, e2)
-               (F  f, _)    -> return (F f, e2)
+    apply (a :&: b) r   = and <$> apply a r <*> apply b r
+      where
+        and (T x) (T y) = T (x :*: y)
+        and (T _) (F f) = F f
+        and (F f) _     = F f
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"
