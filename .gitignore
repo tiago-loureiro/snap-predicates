@@ -8,3 +8,4 @@ dist/
 log/
 tags
 ID
+cabal-dev/
