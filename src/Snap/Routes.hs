@@ -21,15 +21,14 @@ where
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.State.Strict (runState)
+import Control.Monad.State.Strict hiding (get, put)
 import Data.ByteString (ByteString)
 import Data.Either
+import Data.List hiding (head, delete)
 import Data.Predicate
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicates
-import Control.Monad.Trans.State.Strict (State)
-import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List as L
 import qualified Data.Predicate.Env as E
 
@@ -58,7 +57,7 @@ addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          -> (TVal p -> m ())  -- ^ handler
          -> p                 -- ^ predicate
          -> Routes m ()
-addRoute m r x p = Routes $ State.modify ((Route m r (Pack p x)):)
+addRoute m r x p = Routes $ modify ((Route m r (Pack p x)):)
 
 get, head, post, put, delete, trace, options, connect ::
     (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
@@ -78,7 +77,7 @@ connect = addRoute CONNECT
 -- | Turn route definitions into a list of 'String's.
 showRoutes :: Routes m () -> [String]
 showRoutes (Routes routes) =
-    let rs = reverse $ State.execState routes []
+    let rs = reverse $ execState routes []
     in flip map rs $ \x ->
         case _pred x of
             Pack p _ -> shows (_method x)
@@ -92,14 +91,14 @@ showRoutes (Routes routes) =
 -- against the given Snap 'Request'.
 expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
 expandRoutes (Routes routes) =
-    let rg = grouped . sorted . reverse $ State.execState routes []
+    let rg = grouped . sorted $ execState routes []
     in map (\g -> (_path (L.head g), select g)) rg
   where
     sorted :: [Route m] -> [Route m]
-    sorted = L.sortBy (\a b -> _path a `compare` _path b)
+    sorted = sortBy (\a b -> _path a `compare` _path b)
 
     grouped :: [Route m] -> [[Route m]]
-    grouped = L.groupBy (\a b -> _path a == _path b)
+    grouped = groupBy (\a b -> _path a == _path b)
 
 -- The handler selection proceeds as follows:
 -- (1) Consider only handlers with matching methods, or else return 405.
@@ -109,7 +108,7 @@ expandRoutes (Routes routes) =
 select :: MonadSnap m => [Route m] -> m ()
 select g = do
     ms <- filterM byMethod g
-    if L.null ms
+    if null ms
         then respond (Error 405 Nothing)
         else evalAll ms
   where
@@ -119,7 +118,7 @@ select g = do
     evalAll :: MonadSnap m => [Route m] -> m ()
     evalAll rs = do
         req <- getRequest
-        let (n, y) = partitionEithers . snd $ L.foldl' (eval req) (E.empty, []) rs
+        let (n, y) = partitionEithers . snd $ foldl' (eval req) (E.empty, []) rs
         if null y
             then respond (L.head n)
             else L.head y
