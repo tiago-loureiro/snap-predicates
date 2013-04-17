@@ -11,14 +11,26 @@ import Control.Monad.State.Strict
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
 
-type Delta = [(String, Double)]
-
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
 data Boolean f t
   = F f       -- ^ logical False with some meta-data
   | T Delta t -- ^ logical True with some meta-data
   deriving (Eq, Show)
+
+-- | 'Delta' is a measure of distance. It is (optionally)
+-- used in predicates that evaluate to 'T' but not uniquely so, i.e.
+-- different evaluations of 'T' are possible and they may differ in how
+-- close they are to the ideal @T []@. The range of each 'Double' value
+-- is [0.0, 1.0].
+--
+-- An example is content-negotiation. A HTTP request may specify
+-- a preference list of various media-types. A predicate matching one
+-- specific media-type evaluates to 'T', but other media-types may match
+-- even better. To represent this ambivalence, the predicate will include
+-- a delta value which can be used to decide which of the matching
+-- predicates should be preferred.
+type Delta = [Double]
 
 -- | The 'Predicate' class declares the function 'apply' which
 -- evaluates the predicate against some value, returning a value

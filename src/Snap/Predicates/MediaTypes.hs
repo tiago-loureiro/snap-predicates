@@ -2,23 +2,62 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE TemplateHaskell       #-}
 module Snap.Predicates.MediaTypes
-  ( Type (..)
-  , SubType (..)
+  ( -- * Types
+    MType (..)
+  , MSubType (..)
   , MediaType (..)
+
+  -- * Macros
+  , defineType
+  , defineSubType
 
   -- * Predicate
   , Accept (..)
 
   -- * Media-Types
-  , Typ (..)
+  , Type (..)
   , All (..)
   , Application (..)
+  , Audio (..)
+  , Image (..)
+  , Message (..)
+  , Multipart (..)
+  , Text (..)
+  , Video (..)
 
   -- * Media-Sub-Types
-  , SubTyp (..)
+  , SubType (..)
+  , AtomXml (..)
+  , Css (..)
+  , Csv (..)
+  , Encrypted (..)
+  , FormData (..)
+  , Gif (..)
+  , Gzip (..)
+  , Javascript (..)
+  , Jpeg (..)
   , Json (..)
+  , Mixed (..)
+  , Mp4 (..)
+  , Mpeg (..)
+  , OctetStream (..)
+  , Ogg (..)
+  , Partial (..)
+  , Plain (..)
+  , Png (..)
+  , Postscript (..)
+  , Protobuf (..)
+  , RdfXml (..)
+  , RssXml (..)
+  , Tar (..)
+  , Tiff (..)
   , Thrift (..)
+  , Vorbis (..)
+  , Webm (..)
+  , XhtmlXml (..)
+  , Xml (..)
   )
 where
 
@@ -35,12 +74,15 @@ import Snap.Predicates.Internal
 import qualified Data.Predicate.Env as E
 import qualified Snap.Predicates.Parsers.Accept as A
 
-class (Show a, Eq a) => Type a where
+-- | Type-class for converting a 'ByteString' to a media-type.
+class (Show a, Eq a) => MType a where
     toType :: a -> ByteString -> Maybe a
 
-class (Show a, Eq a) => SubType a where
+-- | Type-class for converting a 'ByteString' to a media-subtype.
+class (Show a, Eq a) => MSubType a where
     toSubType :: a -> ByteString -> Maybe a
 
+-- | The Media-type representation.
 data MediaType t s = MediaType
   { _type    :: !t
   , _subtype :: !s
@@ -51,7 +93,7 @@ data MediaType t s = MediaType
 -- | A 'Predicate' against the 'Request's "Accept" header.
 data Accept t s = Accept t s deriving Eq
 
-instance (Type t, SubType s) => Predicate (Accept t s) Request where
+instance (MType t, MSubType s) => Predicate (Accept t s) Request where
     type FVal (Accept t s) = Error
     type TVal (Accept t s) = MediaType t s
     apply (Accept x y) r   = do
@@ -60,12 +102,12 @@ instance (Type t, SubType s) => Predicate (Accept t s) Request where
                Just m  -> return (T (delta m) m)
                Nothing -> return (F (err 406 message))
       where
-        q a b = A.medQuality b `compare` A.medQuality a
-
         readMediaTypes = do
             let mtypes = sortBy q . concat . map A.parseMediaTypes $ headers r "accept"
             E.insert "accept" mtypes
             return mtypes
+
+        q a b = A.medQuality b `compare` A.medQuality a
 
         message = "Expected 'Accept: "
                     <> fromString (show x)
@@ -73,71 +115,87 @@ instance (Type t, SubType s) => Predicate (Accept t s) Request where
                     <> fromString (show y)
                     <> "'."
 
-        delta m = [("media", 1.0 - (_quality m))]
+        delta m = [1.0 - _quality m]
 
 instance (Show t, Show s) => Show (Accept t s) where
     show (Accept t s) = "Accept: " ++ show t ++ "/" ++ show s
 
-mediaType :: (Type t, SubType s) => t -> s -> [A.MediaType] -> Maybe (MediaType t s)
+mediaType :: (MType t, MSubType s) => t -> s -> [A.MediaType] -> Maybe (MediaType t s)
 mediaType t s = safeHead . mapMaybe (\m -> do
     t' <- if A.medType    m == "*" then Just t else toType t    (A.medType m)
     s' <- if A.medSubtype m == "*" then Just s else toSubType s (A.medSubtype m)
     guard (t == t' && s == s')
     return $ MediaType t s (A.medQuality m) (A.medParams m))
 
+
+-- Media-Types:
+
 -- | Generic media-type.
-data Typ = Typ ByteString deriving Eq
+data Type = Type ByteString deriving Eq
 
-instance Type Typ where
-    toType o@(Typ t) s = if t == s then Just o else Nothing
+instance MType Type where
+    toType o@(Type t) s = if t == s then Just o else Nothing
 
-instance Show Typ where
-    show (Typ t) = show t
+instance Show Type where
+    show (Type t) = show t
+
+defineType "Application" "application"
+defineType "Audio" "audio"
+defineType "Image" "image"
+defineType "Message" "message"
+defineType "Multipart" "multipart"
+defineType "Text" "text"
+defineType "Video" "video"
+
+-- Media-Subtypes:
 
 -- | Generic media-subtype.
-data SubTyp = SubTyp ByteString deriving Eq
+data SubType = SubType ByteString deriving Eq
 
-instance SubType SubTyp where
-    toSubType o@(SubTyp t) s = if t == s then Just o else Nothing
+instance MSubType SubType where
+    toSubType o@(SubType t) s = if t == s then Just o else Nothing
 
-instance Show SubTyp where
-    show (SubTyp t) = show t
+instance Show SubType where
+    show (SubType t) = show t
+
+defineSubType "AtomXml" "atom+xml"
+defineSubType "Css" "css"
+defineSubType "Csv" "csv"
+defineSubType "Encrypted" "encrypted"
+defineSubType "FormData" "form-data"
+defineSubType "Gif" "gif"
+defineSubType "Gzip" "gzip"
+defineSubType "Javascript" "javascript"
+defineSubType "Jpeg" "jpeg"
+defineSubType "Json" "json"
+defineSubType "Mixed" "mixed"
+defineSubType "Mp4" "mp4"
+defineSubType "Mpeg" "mpeg"
+defineSubType "OctetStream" "octet-stream"
+defineSubType "Ogg" "ogg"
+defineSubType "Partial" "partial"
+defineSubType "Plain" "plain"
+defineSubType "Png" "png"
+defineSubType "Postscript" "postscript"
+defineSubType "Protobuf" "x-protobuf"
+defineSubType "RdfXml" "rdf+xml"
+defineSubType "RssXml" "rss+xml"
+defineSubType "Tar" "tar"
+defineSubType "Tiff" "tiff"
+defineSubType "Thrift" "x-thrift"
+defineSubType "Vorbis" "vorbis"
+defineSubType "Webm" "webm"
+defineSubType "XhtmlXml" "xhtml+xml"
+defineSubType "Xml" "xml"
 
 -- | media-type and sub-type \"*\".
 data All = All deriving Eq
 
-instance Type All where
+instance MType All where
     toType _ s = if s == "*" then Just All else Nothing
 
-instance SubType All where
+instance MSubType All where
     toSubType _ s = if s == "*" then Just All else Nothing
 
 instance Show All where
     show _ = "*"
-
--- | media-type \"application\".
-data Application = Application deriving Eq
-
-instance Type Application where
-    toType _ s = if s == "application" then Just Application else Nothing
-
-instance Show Application where
-    show _ = "application"
-
--- | media-subtype \"json\".
-data Json = Json deriving Eq
-
-instance SubType Json where
-    toSubType _ s = if s == "json" then Just Json else Nothing
-
-instance Show Json where
-    show _ = "json"
-
--- | media-subtype \"x-thrift\".
-data Thrift = Thrift deriving Eq
-
-instance SubType Thrift where
-    toSubType _ s = if s == "x-thrift" then Just Thrift else Nothing
-
-instance Show Thrift where
-    show _ = "x-thrift"

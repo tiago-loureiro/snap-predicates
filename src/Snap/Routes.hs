@@ -100,6 +100,11 @@ expandRoutes (Routes routes) =
     grouped :: [Route m] -> [[Route m]]
     grouped = groupBy (\a b -> _path a == _path b)
 
+data Handler m = Handler
+  { _delta   :: !Delta
+  , _handler :: !(m ())
+  }
+
 -- The handler selection proceeds as follows:
 -- (1) Consider only handlers with matching methods, or else return 405.
 -- (2) Evaluate 'Route' predicates.
@@ -123,25 +128,23 @@ select g = do
             then respond (L.head n)
             else closest y
 
-    eval :: MonadSnap m => Request -> (Env, [Either Error (Delta, m ())]) -> Route m -> (Env, [Either Error (Delta, m ())])
+    eval :: MonadSnap m => Request -> (Env, [Either Error (Handler m)]) -> Route m -> (Env, [Either Error (Handler m)])
     eval rq (e, rs) r =
         case _pred r of
             Pack p h ->
                 case runState (apply p rq) e of
                     (F   m, e') -> (e', Left m : rs)
-                    (T d v, e') -> (e', Right (d, (h v)) : rs)
+                    (T d v, e') -> (e', Right (Handler d (h v)) : rs)
 
-    closest :: [(Delta, m ())] -> m ()
+    closest :: [Handler m] -> m ()
     closest xs =
-        let (exact, fuzzy) = partition (null . fst) xs
-            categories     = nub $ concatMap (map fst . fst) fuzzy
-            allDeltas      = map (\(d, m) -> (deltaSum categories d, m)) fuzzy
-        in if null exact
-               then snd $ minimumBy (\(x, _) (y, _) -> x `compare` y) allDeltas
-               else snd $ L.head exact
+        let len = maximum . map (length . _delta) $ xs
+            xs' = map (\(Handler d m) -> Handler (stretch d len) m) xs
+            ord = sortBy (\a b -> sum (_delta a) `compare` sum (_delta b)) xs'
+        in _handler (L.head ord)
 
-    deltaSum :: [String] -> Delta -> Double
-    deltaSum cs = sum . map snd . filter (flip elem cs . fst)
+    stretch :: [Double] -> Int -> [Double]
+    stretch ds i = ds ++ (take (i - length ds) [1.0, 1.0 ..])
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do

@@ -47,6 +47,7 @@ library
       , case-insensitive >= 1.0
       , snap-core        >= 0.9
       , attoparsec       >= 0.10
+      , template-haskell >= 2.8
 
     other-extensions:
        BangPatterns
@@ -56,6 +57,7 @@ library
      , OverloadedStrings
      , TypeFamilies
      , TypeOperators
+     , TemplateHaskell
 
 test-suite snap-predicates-test-suite
     type:             exitcode-stdio-1.0
