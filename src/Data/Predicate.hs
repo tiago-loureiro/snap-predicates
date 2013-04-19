@@ -127,10 +127,14 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"
 
+-- | Evaluate the given predicate 'p' against the given value 'a'.
+eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)
+eval p a = evalState (apply p a) E.empty
+
 -- | The 'with' function will invoke the given function only if the predicate 'p'
 -- applied to the test value 'a' evaluates to 'T'.
 with :: (Monad m, Predicate p a) => p -> a -> (TVal p -> m ()) -> m ()
 with p a f =
-    case evalState (apply p a) E.empty of
+    case eval p a of
         T _ x -> f x
         _     -> return ()

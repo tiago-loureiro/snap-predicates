@@ -5,12 +5,10 @@
 module Tests.Data.Predicate (tests) where
 
 import Control.Applicative hiding (Const)
-import Control.Monad.State.Strict hiding (get)
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 import Data.Predicate
-import qualified Data.Predicate.Env as E
 
 tests :: [Test]
 tests =
@@ -20,9 +18,6 @@ tests =
     , testProperty "(:||:)" testOr
     , testProperty "(:|:)" testOr'
     ]
-
-eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)
-eval p r = evalState (apply p r) E.empty
 
 testConst :: Const Int Char -> Bool
 testConst x@(Const c) = eval x () == T [] c

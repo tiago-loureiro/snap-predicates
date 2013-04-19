@@ -4,14 +4,12 @@ module Tests.Snap.Predicates (tests) where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
-import Control.Monad.State.Strict hiding (get)
 import Data.Predicate
 import Snap.Predicates
 import Snap.Predicates.Params
 import Snap.Predicates.MediaTypes
 import Snap.Test
 import qualified Data.Map.Strict as M
-import qualified Data.Predicate.Env as E
 
 tests :: [Test]
 tests =
@@ -20,9 +18,6 @@ tests =
     , testAcceptJson
     , testAcceptThrift
     ]
-
-eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)
-eval p r = evalState (apply p r) E.empty
 
 testAccept :: Test
 testAccept = testCase "Accept Predicate" $ do

@@ -123,13 +123,13 @@ select g = do
     evalAll :: MonadSnap m => [Route m] -> m ()
     evalAll rs = do
         req <- getRequest
-        let (n, y) = partitionEithers . snd $ foldl' (eval req) (E.empty, []) rs
+        let (n, y) = partitionEithers . snd $ foldl' (evalSingle req) (E.empty, []) rs
         if null y
             then respond (L.head n)
             else closest y
 
-    eval :: MonadSnap m => Request -> (Env, [Either Error (Handler m)]) -> Route m -> (Env, [Either Error (Handler m)])
-    eval rq (e, rs) r =
+    evalSingle :: MonadSnap m => Request -> (Env, [Either Error (Handler m)]) -> Route m -> (Env, [Either Error (Handler m)])
+    evalSingle rq (e, rs) r =
         case _pred r of
             Pack p h ->
                 case runState (apply p rq) e of
