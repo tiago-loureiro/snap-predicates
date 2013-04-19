@@ -33,9 +33,14 @@ and 'Data.Predicate.F' \-\- meta-data for each case:
 @
 data 'Data.Predicate.Boolean' f t =
     'Data.Predicate.F' (Maybe f)
-  | 'Data.Predicate.T' t
+  | 'Data.Predicate.T' 'Data.Predicate.Delta' t
   deriving (Eq, Show)
 @
+
+'Data.Predicate.Delta' can in most instances be ignored, i.e. set to @[]@.
+It's purpose is as a measure of distance for those predicates which evaluate
+to 'Data.Predicate.T' but some may be \"closer\" in some way than others. An
+example is for instance HTTP content-negotiations (cf.  'Snap.Predicates.MediaTypes.Accept')
 
 Further there is a type-class 'Data.Predicate.Predicate' defined which
 contains an evaluation function 'Data.Predicate.apply', where the
@@ -46,14 +51,22 @@ or 'Data.Predicate.F'.
 class 'Data.Predicate.Predicate' p a where
     type 'Data.Predicate.FVal' p
     type 'Data.Predicate.TVal' p
-    apply :: p -> a -> Boolean ('Data.Predicate.FVal' p) ('Data.Predicate.TVal' p)
+    apply :: p -> a -> 'Control.Monad.State.Strict.State' 'Data.Predicate.Env' (Boolean ('Data.Predicate.FVal' p)) ('Data.Predicate.TVal' p)
 @
 
-All concrete predicates are instances of this type-class, which does not
+All predicates are instances of this type-class, which does not
 specify the type against which the predicate is evaluated, nor the types
 of actual meta-data for the true/false case of the Boolean returned.
 Snap related predicates are normally defined against 'Snap.Core.Request'
 and in case they fail, they return a status code and an optional message.
+
+Predicates may utilise the stateful 'Data.Predicate.Env.Env' to cache intermediate
+results accross multiple evaluations, i.e. a resource may be declared multiple
+times with different sets of predicates which means that in case a predicate
+is part of more than one set it is evaluated multiple times for the same
+input data. As an optimisation it may be beneficial to store intermediate
+results in 'Data.Predicate.Env.Env' and re-use them later (cf. the implementation
+of 'Snap.Predicates.MediaTypes.Accept').
 
 Besides these type definitions, there are some ways to connect two
 'Data.Predicate.Predicate's to form a new one as the logical @OR@ or the
@@ -65,7 +78,7 @@ logical @AND@ of its parts. These are:
 
 Besides evaluating to 'Data.Predicate.T' or 'Data.Predicate.F' depending
 on the truth values of its parts, these connectives also propagate the
-meta-data appropriately.
+meta-data and 'Data.Predicate.Delta' appropriately.
 
 If 'Data.Predicate.:&:' evaluates to 'Data.Predicate.T' it has to combine
 the meta-data of both predicates, and it uses the product type
@@ -85,48 +98,45 @@ can be used.
 Finally there are 'Data.Predicate.Const' and 'Data.Predicate.Fail' to
 always evaluate to 'Data.Predicate.T' or 'Data.Predicate.F' respectively.
 
-As an example of how these operators are used, see below in 'Routes' section.
+As an example of how these operators are used, see below in section \"Routes\".
 -}
 
 {- $example
 
 @
-data 'Snap.Predicates.Accept' = 'Snap.Predicates.Accept' ByteString deriving Eq
+data 'Snap.Predicates.Params.Param' = Param 'Data.ByteString.ByteString' deriving Eq
 
-instance 'Data.Predicate.Predicate' 'Snap.Predicates.Accept' 'Snap.Core.Request' where
-    type 'Data.Predicate.FVal' 'Snap.Predicates.Accept' = (Word, Maybe ByteString)
-    type 'Data.Predicate.TVal' 'Snap.Predicates.Accept' = ()
-    'Data.Predicate.apply' ('Snap.Predicates.Accept' x) r =
-        if x \`elem\` headerValues r \"Accept\"
-            then 'Data.Predicate.T' ()
-            else 'Data.Predicate.F' $ Just (406, Just $ \"Expected 'Accept: \" <> x <> \"'.\")
+instance 'Data.Predicate.Predicate' Param 'Snap.Core.Request' where
+    type 'Data.Predicate.FVal' Param = 'Snap.Predicates.Error'
+    type 'Data.Predicate.TVal' Param = ByteString
+    apply (Param x) r =
+        case params r x of
+            []    -> return (F ('Snap.Predicates.Error' 400 (Just $ \"Expected parameter '\" \<\> x \<\> \"'.\")))
+            (v:_) -> return (T [] v)
 @
 
-This is a simple example testing the value of a 'Snap.Core.Request's accept
-header against some given value. The function @headerValues@ is not shown,
-but gets the actual Accept-Header values of the request.
+This is a simple example looking for the existence of a 'Snap.Core.Request' parameter
+with the given name. In the success case, the parameter value is returned.
 
 As mentioned before, Snap predicates usually fix the type @a@ from
 'Data.Predicate.Predicate' above to 'Snap.Core.Request'. The associated
 types 'Data.Predicate.FVal' and 'Data.Predicate.TVal' denote the meta-data
-types of the predicate. In this example, there is no useful information for
-the 'Data.Predicate.T'-case, so 'Data.Predicate.TVal' becomes '()'.
-The 'Data.Predicate.F'-case is set to the pair @(Word, Maybe ByteString)@
-and indeed, if the predicate fails it sets the right HTTP status code
-(406) and some helpful message.
+types of the predicate. In this example, the meta-date type is 'Data.ByteString.ByteString'.
+The 'Data.Predicate.F'-case is 'Snap.Predicates.Error' which contains a status
+code and an optional message.
 
 -}
 
 {- $routes
 
 So how are 'Data.Predicate.Predicate's used in some Snap application?
-One way is to just apply them to a given request inside a snap handler, e.g.
+One way is to just evaluate them against a given request inside a snap handler, e.g.
 
 @
 someHandler :: 'Snap.Core.Snap' ()
 someHandler = do
     req <- 'Snap.Core.getRequest'
-    case apply ('Snap.Predicates.Accept' \"application/json\" 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"baz\") req of
+    case 'Data.Predicate.eval' ('Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:&:' 'Snap.Predicates.Params.Param' \"baz\") req of
         'Data.Predicate.T' (_ 'Data.Predicate.:*:' bazValue) -> ...
         'Data.Predicate.F' (Just (i, msg))  -> ...
         'Data.Predicate.F' Nothing          -> ...
@@ -138,27 +148,33 @@ However another possibility is to augment route definitions with the
 @
 sitemap :: 'Snap.Routes.Routes' Snap ()
 sitemap = do
-    'Snap.Routes.get'  \"\/a\" handlerA $ 'Snap.Predicates.AcceptJson' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:|:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
-    'Snap.Routes.get'  \"\/b\" handlerB $ 'Snap.Predicates.AcceptJson' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:||:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
+    'Snap.Routes.get'  \"\/a\" handlerA $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:|:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
+    'Snap.Routes.get'  \"\/b\" handlerB $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Text' 'Snap.Predicates.MediaTypes.Plain' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:||:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
     'Snap.Routes.get'  \"\/c\" handlerC $ 'Data.Predicate.Fail' (410, Just \"Gone.\")
-    'Snap.Routes.post' \"\/d\" handlerD $ 'Snap.Predicates.AcceptThrift'
-    'Snap.Routes.post' \"\/e\" handlerE $ 'Snap.Predicates.Accept' \"plain/text\"
+    'Snap.Routes.post' \"\/d\" handlerD $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Protobuf'
+    'Snap.Routes.post' \"\/e\" handlerE $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Xml'
 @
 
 The handlers then encode their pre-conditions in their type-signature:
 
 @
-handlerA :: 'Snap.Predicates.AcceptJson' 'Data.Predicate.:*:' ByteString 'Data.Predicate.:*:' ByteString -> Snap ()
-handlerB :: 'Snap.Predicates.AcceptJson' 'Data.Predicate.:*:' (ByteString 'Data.Predicate.:+:' ByteString) 'Data.Predicate.:*:' ByteString -> Snap ()
-handlerC :: 'Snap.Predicates.AcceptJson' 'Data.Predicate.:*:' Char -> Snap ()
-handlerD :: 'Snap.Predicates.AcceptThrift' -> Snap ()
-handlerE :: () -> Snap ()
+handlerA :: 'Snap.Predicates.MediaTypes.MediaType' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:*:' ByteString 'Data.Predicate.:*:' ByteString -> Snap ()
+handlerB :: 'Snap.Predicates.MediaTypes.MediaType' 'Snap.Predicates.MediaTypes.Text' 'Snap.Predicates.MediaTypes.Plain' 'Data.Predicate.:*:' (ByteString 'Data.Predicate.:+:' ByteString) 'Data.Predicate.:*:' ByteString -> Snap ()
+handlerC :: 'Snap.Predicates.MediaTypes.MediaType' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:*:' Char -> Snap ()
+handlerD :: 'Snap.Predicates.MediaTypes.MediaType' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Protobuf' -> Snap ()
+handlerE :: 'Snap.Predicates.MediaTypes.MediaType' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Xml' -> Snap ()
 @
 
-As usually these type-declarations have to match, or else the code will
-not compile. One thing to note is that 'Data.Predicate.Fail' works with
-all handler signatures, which is safe, because the handler is never
-invoked, or else Fail is used in some logical disjunction.
+The type-declaration of a handler has to match the corresponding predicate,
+i.e. the type of the predicate's 'Data.Predicate.T' meta-data value:
+
+@
+('Snap.Core.MonadSnap' m, 'Data.Predicate.Predicate' p 'Snap.Core.Request') => 'Data.Predicate.TVal' p -> m ()
+@
+
+One thing to note is that 'Data.Predicate.Fail' works with
+all 'Data.Predicate.T' meta-data types which is safe because the handler is never
+invoked, or 'Data.Predicate.Fail' is used in some logical disjunction.
 
 Given the route and handler definitions above, one can then integrate
 with Snap via 'Snap.Routes.expandRoutes', which turns the

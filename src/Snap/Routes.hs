@@ -86,7 +86,7 @@ showRoutes (Routes routes) =
                       . (' ':)
                       . shows p $ ""
 
--- | Turn route definitions into "snapable" format, i.e.
+-- | Turn route definitions into \"snapable\" format, i.e.
 -- Routes are grouped per path and selection evaluates routes
 -- against the given Snap 'Request'.
 expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
