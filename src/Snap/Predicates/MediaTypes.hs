@@ -9,10 +9,6 @@ module Snap.Predicates.MediaTypes
   , MSubType (..)
   , MediaType (..)
 
-  -- * Macros
-  , defineType
-  , defineSubType
-
   -- * Predicate
   , Accept (..)
 

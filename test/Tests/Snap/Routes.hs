@@ -13,7 +13,7 @@ import Data.Text.Encoding
 import Snap.Core
 import Snap.Predicates
 import Snap.Predicates.Params
-import Snap.Predicates.MediaTypes
+import Snap.Predicates.MediaTypes hiding (Text)
 import Snap.Routes
 import qualified Snap.Test as T
 import qualified Data.Map.Strict as M

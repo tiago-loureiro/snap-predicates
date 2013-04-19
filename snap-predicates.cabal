@@ -34,7 +34,8 @@ library
       , Snap.Routes
 
     other-modules:
-        Snap.Predicates.Parsers.Accept
+        Snap.Predicates.Internal
+      , Snap.Predicates.Parsers.Accept
       , Snap.Predicates.Parsers.Shared
 
     build-depends:
@@ -83,6 +84,7 @@ test-suite snap-predicates-test-suite
       , snap-core        >= 0.9
       , text             >= 0.11
       , attoparsec       >= 0.10
+      , template-haskell >= 2.8
 
       , HUnit                      >= 1.2
       , QuickCheck                 >= 2.3
@@ -98,6 +100,7 @@ test-suite snap-predicates-test-suite
      , OverloadedStrings
      , TypeFamilies
      , TypeOperators
+     , TemplateHaskell
 
 source-repository head
     type:             git
