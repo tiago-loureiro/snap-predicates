@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>Snap.Predicates.Tutorial</title><link href="ocean.css" rel="stylesheet" type="text/css" title="Ocean" /><script src="haddock-util.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
 window.onload = function () {pageLoad();setSynopsis("mini_Snap-Predicates-Tutorial.html");};
 //]]>
-</script></head><body><div id="package-header"><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul><p class="caption">snap-predicates-0.1.0: Predicates for route definitions.</p></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr></table><p class="caption">Snap.Predicates.Tutorial</p></div><div id="table-of-contents"><p class="caption">Contents</p><ul><li><a href="#g:1">Motivation
+</script></head><body><div id="package-header"><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul><p class="caption">snap-predicates-0.2.0: Predicates for route definitions.</p></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>Safe-Inferred</td></tr></table><p class="caption">Snap.Predicates.Tutorial</p></div><div id="table-of-contents"><p class="caption">Contents</p><ul><li><a href="#g:1">Motivation
 </a></li><li><a href="#g:2">Introduction
 </a></li><li><a href="#g:3">Example Predicate
 </a></li><li><a href="#g:4">Routes
@@ -19,9 +19,13 @@ and <code><a href="Data-Predicate.html#t:F">F</a></code> -- meta-data for each c
 </p><pre>
 data <code><a href="Data-Predicate.html#t:Boolean">Boolean</a></code> f t =
     <code><a href="Data-Predicate.html#t:F">F</a></code> (Maybe f)
-  | <code><a href="Data-Predicate.html#t:T">T</a></code> t
+  | <code><a href="Data-Predicate.html#t:T">T</a></code> <code><a href="Data-Predicate.html#t:Delta">Delta</a></code> t
   deriving (Eq, Show)
-</pre><p>Further there is a type-class <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> defined which
+</pre><p><code><a href="Data-Predicate.html#t:Delta">Delta</a></code> can in most instances be ignored, i.e. set to <code>[]</code>.
+It's purpose is as a measure of distance for those predicates which evaluate
+to <code><a href="Data-Predicate.html#t:T">T</a></code> but some may be &quot;closer&quot; in some way than others. An
+example is for instance HTTP content-negotiations (cf.  <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code>)
+</p><p>Further there is a type-class <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> defined which
 contains an evaluation function <code><a href="Data-Predicate.html#t:apply">apply</a></code>, where the
 predicate instance is applied to some value, yielding <code><a href="Data-Predicate.html#t:T">T</a></code>
 or <code><a href="Data-Predicate.html#t:F">F</a></code>.
@@ -29,12 +33,19 @@ or <code><a href="Data-Predicate.html#t:F">F</a></code>.
 class <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> p a where
     type <code><a href="Data-Predicate.html#t:FVal">FVal</a></code> p
     type <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> p
-    apply :: p -&gt; a -&gt; Boolean (<code><a href="Data-Predicate.html#t:FVal">FVal</a></code> p) (<code><a href="Data-Predicate.html#t:TVal">TVal</a></code> p)
-</pre><p>All concrete predicates are instances of this type-class, which does not
+    apply :: p -&gt; a -&gt; <code><a href="/usr/share/doc/haskell-mtl/html/Control-Monad-State-Strict.html#t:State">State</a></code> <code><a href="Data-Predicate.html#t:Env">Env</a></code> (Boolean (<code><a href="Data-Predicate.html#t:FVal">FVal</a></code> p)) (<code><a href="Data-Predicate.html#t:TVal">TVal</a></code> p)
+</pre><p>All predicates are instances of this type-class, which does not
 specify the type against which the predicate is evaluated, nor the types
 of actual meta-data for the true/false case of the Boolean returned.
-Snap related predicates are normally defined against <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>
+Snap related predicates are normally defined against <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>
 and in case they fail, they return a status code and an optional message.
+</p><p>Predicates may utilise the stateful <code><a href="Data-Predicate-Env.html#t:Env">Env</a></code> to cache intermediate
+results accross multiple evaluations, i.e. a resource may be declared multiple
+times with different sets of predicates which means that in case a predicate
+is part of more than one set it is evaluated multiple times for the same
+input data. As an optimisation it may be beneficial to store intermediate
+results in <code><a href="Data-Predicate-Env.html#t:Env">Env</a></code> and re-use them later (cf. the implementation
+of <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code>).
 </p><p>Besides these type definitions, there are some ways to connect two
 <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code>s to form a new one as the logical <code>OR</code> or the
 logical <code>AND</code> of its parts. These are:
@@ -42,7 +53,7 @@ logical <code>AND</code> of its parts. These are:
 </li><li> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> as logical <code>AND</code>
 </li></ul><p>Besides evaluating to <code><a href="Data-Predicate.html#t:T">T</a></code> or <code><a href="Data-Predicate.html#t:F">F</a></code> depending
 on the truth values of its parts, these connectives also propagate the
-meta-data appropriately.
+meta-data and <code><a href="Data-Predicate.html#t:Delta">Delta</a></code> appropriately.
 </p><p>If <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> evaluates to <code><a href="Data-Predicate.html#t:T">T</a></code> it has to combine
 the meta-data of both predicates, and it uses the product type
 <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> for this. This type also has a right-associative
@@ -58,64 +69,64 @@ meta-data of the same type, there is often no need to distinguish which
 can be used.
 </p><p>Finally there are <code><a href="Data-Predicate.html#t:Const">Const</a></code> and <code><a href="Data-Predicate.html#t:Fail">Fail</a></code> to
 always evaluate to <code><a href="Data-Predicate.html#t:T">T</a></code> or <code><a href="Data-Predicate.html#t:F">F</a></code> respectively.
-</p><p>As an example of how these operators are used, see below in <code>Routes</code> section.
+</p><p>As an example of how these operators are used, see below in section &quot;Routes&quot;.
 </p></div><h1 id="g:3">Example Predicate
 </h1><div class="doc"><pre>
-data <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> = <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> ByteString deriving Eq
+data <code><a href="Snap-Predicates-Params.html#t:Param">Param</a></code> = Param <code><a href="/usr/share/doc/ghc/html/libraries/bytestring-0.10.0.2/Data-ByteString.html#t:ByteString">ByteString</a></code> deriving Eq
 
-instance <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code> where
-    type <code><a href="Data-Predicate.html#t:FVal">FVal</a></code> <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> = (Word, Maybe ByteString)
-    type <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> = ()
-    <code><a href="Data-Predicate.html#t:apply">apply</a></code> (<code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> x) r =
-        if x `elem` headerValues r &quot;Accept&quot;
-            then <code><a href="Data-Predicate.html#t:T">T</a></code> ()
-            else <code><a href="Data-Predicate.html#t:F">F</a></code> $ Just (406, Just $ &quot;Expected 'Accept: &quot; <a href=""></a> x <a href=""></a> &quot;'.&quot;)
-</pre><p>This is a simple example testing the value of a <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>s accept
-header against some given value. The function <code>headerValues</code> is not shown,
-but gets the actual Accept-Header values of the request.
+instance <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> Param <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code> where
+    type <code><a href="Data-Predicate.html#t:FVal">FVal</a></code> Param = <code><a href="Snap-Predicates.html#t:Error">Error</a></code>
+    type <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> Param = ByteString
+    apply (Param x) r =
+        case params r x of
+            []    -&gt; return (F (<code><a href="Snap-Predicates.html#t:Error">Error</a></code> 400 (Just $ &quot;Expected parameter '&quot; &lt;&gt; x &lt;&gt; &quot;'.&quot;)))
+            (v:_) -&gt; return (T [] v)
+</pre><p>This is a simple example looking for the existence of a <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code> parameter
+with the given name. In the success case, the parameter value is returned.
 </p><p>As mentioned before, Snap predicates usually fix the type <code>a</code> from
-<code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> above to <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>. The associated
+<code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> above to <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>. The associated
 types <code><a href="Data-Predicate.html#t:FVal">FVal</a></code> and <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> denote the meta-data
-types of the predicate. In this example, there is no useful information for
-the <code><a href="Data-Predicate.html#t:T">T</a></code>-case, so <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> becomes '()'.
-The <code><a href="Data-Predicate.html#t:F">F</a></code>-case is set to the pair <code>(Word, Maybe ByteString)</code>
-and indeed, if the predicate fails it sets the right HTTP status code
-(406) and some helpful message.
+types of the predicate. In this example, the meta-date type is <code><a href="/usr/share/doc/ghc/html/libraries/bytestring-0.10.0.2/Data-ByteString.html#t:ByteString">ByteString</a></code>.
+The <code><a href="Data-Predicate.html#t:F">F</a></code>-case is <code><a href="Snap-Predicates.html#t:Error">Error</a></code> which contains a status
+code and an optional message.
 </p></div><h1 id="g:4">Routes
 </h1><div class="doc"><p>So how are <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code>s used in some Snap application?
-One way is to just apply them to a given request inside a snap handler, e.g.
+One way is to just evaluate them against a given request inside a snap handler, e.g.
 </p><pre>
-someHandler :: <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Snap">Snap</a></code> ()
+someHandler :: <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Snap">Snap</a></code> ()
 someHandler = do
-    req &lt;- <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:getRequest">getRequest</a></code>
-    case apply (<code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> &quot;application/json&quot; <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;baz&quot;) req of
+    req &lt;- <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:getRequest">getRequest</a></code>
+    case <code><a href="Data-Predicate.html#t:eval">eval</a></code> (<code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Json">Json</a></code> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates-Params.html#t:Param">Param</a></code> &quot;baz&quot;) req of
         <code><a href="Data-Predicate.html#t:T">T</a></code> (_ <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> bazValue) -&gt; ...
         <code><a href="Data-Predicate.html#t:F">F</a></code> (Just (i, msg))  -&gt; ...
         <code><a href="Data-Predicate.html#t:F">F</a></code> Nothing          -&gt; ...
 </pre><p>However another possibility is to augment route definitions with the
-<code><a href="Snap-Routes.html#t:Routes">Routes</a></code> monad to use them with <code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:route">route</a></code>, e.g.
+<code><a href="Snap-Routes.html#t:Routes">Routes</a></code> monad to use them with <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:route">route</a></code>, e.g.
 </p><pre>
 sitemap :: <code><a href="Snap-Routes.html#t:Routes">Routes</a></code> Snap ()
 sitemap = do
-    <code><a href="Snap-Routes.html#t:get">get</a></code>  &quot;/a&quot; handlerA $ <code><a href="Snap-Predicates.html#t:AcceptJson">AcceptJson</a></code> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> (<code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;name&quot; <code><a href="Data-Predicate.html#t::-124-:">:|:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;nick&quot;) <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;foo&quot;
-    <code><a href="Snap-Routes.html#t:get">get</a></code>  &quot;/b&quot; handlerB $ <code><a href="Snap-Predicates.html#t:AcceptJson">AcceptJson</a></code> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> (<code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;name&quot; <code><a href="Data-Predicate.html#t::-124--124-:">:||:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;nick&quot;) <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;foo&quot;
+    <code><a href="Snap-Routes.html#t:get">get</a></code>  &quot;/a&quot; handlerA $ <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Json">Json</a></code> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> (<code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;name&quot; <code><a href="Data-Predicate.html#t::-124-:">:|:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;nick&quot;) <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;foo&quot;
+    <code><a href="Snap-Routes.html#t:get">get</a></code>  &quot;/b&quot; handlerB $ <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Text">Text</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Plain">Plain</a></code> <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> (<code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;name&quot; <code><a href="Data-Predicate.html#t::-124--124-:">:||:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;nick&quot;) <code><a href="Data-Predicate.html#t::-38-:">:&amp;:</a></code> <code><a href="Snap-Predicates.html#t:Param">Param</a></code> &quot;foo&quot;
     <code><a href="Snap-Routes.html#t:get">get</a></code>  &quot;/c&quot; handlerC $ <code><a href="Data-Predicate.html#t:Fail">Fail</a></code> (410, Just &quot;Gone.&quot;)
-    <code><a href="Snap-Routes.html#t:post">post</a></code> &quot;/d&quot; handlerD $ <code><a href="Snap-Predicates.html#t:AcceptThrift">AcceptThrift</a></code>
-    <code><a href="Snap-Routes.html#t:post">post</a></code> &quot;/e&quot; handlerE $ <code><a href="Snap-Predicates.html#t:Accept">Accept</a></code> &quot;plain/text&quot;
+    <code><a href="Snap-Routes.html#t:post">post</a></code> &quot;/d&quot; handlerD $ <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Protobuf">Protobuf</a></code>
+    <code><a href="Snap-Routes.html#t:post">post</a></code> &quot;/e&quot; handlerE $ <code><a href="Snap-Predicates-MediaTypes.html#t:Accept">Accept</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Xml">Xml</a></code>
 </pre><p>The handlers then encode their pre-conditions in their type-signature:
 </p><pre>
-handlerA :: <code><a href="Snap-Predicates.html#t:AcceptJson">AcceptJson</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString -&gt; Snap ()
-handlerB :: <code><a href="Snap-Predicates.html#t:AcceptJson">AcceptJson</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> (ByteString <code><a href="Data-Predicate.html#t::-43-:">:+:</a></code> ByteString) <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString -&gt; Snap ()
-handlerC :: <code><a href="Snap-Predicates.html#t:AcceptJson">AcceptJson</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> Char -&gt; Snap ()
-handlerD :: <code><a href="Snap-Predicates.html#t:AcceptThrift">AcceptThrift</a></code> -&gt; Snap ()
-handlerE :: () -&gt; Snap ()
-</pre><p>As usually these type-declarations have to match, or else the code will
-not compile. One thing to note is that <code><a href="Data-Predicate.html#t:Fail">Fail</a></code> works with
-all handler signatures, which is safe, because the handler is never
-invoked, or else Fail is used in some logical disjunction.
+handlerA :: <code><a href="Snap-Predicates-MediaTypes.html#t:MediaType">MediaType</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Json">Json</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString -&gt; Snap ()
+handlerB :: <code><a href="Snap-Predicates-MediaTypes.html#t:MediaType">MediaType</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Text">Text</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Plain">Plain</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> (ByteString <code><a href="Data-Predicate.html#t::-43-:">:+:</a></code> ByteString) <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> ByteString -&gt; Snap ()
+handlerC :: <code><a href="Snap-Predicates-MediaTypes.html#t:MediaType">MediaType</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Json">Json</a></code> <code><a href="Data-Predicate.html#t::-42-:">:*:</a></code> Char -&gt; Snap ()
+handlerD :: <code><a href="Snap-Predicates-MediaTypes.html#t:MediaType">MediaType</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Protobuf">Protobuf</a></code> -&gt; Snap ()
+handlerE :: <code><a href="Snap-Predicates-MediaTypes.html#t:MediaType">MediaType</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Application">Application</a></code> <code><a href="Snap-Predicates-MediaTypes.html#t:Xml">Xml</a></code> -&gt; Snap ()
+</pre><p>The type-declaration of a handler has to match the corresponding predicate,
+i.e. the type of the predicate's <code><a href="Data-Predicate.html#t:T">T</a></code> meta-data value:
+</p><pre>
+(<code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:MonadSnap">MonadSnap</a></code> m, <code><a href="Data-Predicate.html#t:Predicate">Predicate</a></code> p <code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:Request">Request</a></code>) =&gt; <code><a href="Data-Predicate.html#t:TVal">TVal</a></code> p -&gt; m ()
+</pre><p>One thing to note is that <code><a href="Data-Predicate.html#t:Fail">Fail</a></code> works with
+all <code><a href="Data-Predicate.html#t:T">T</a></code> meta-data types which is safe because the handler is never
+invoked, or <code><a href="Data-Predicate.html#t:Fail">Fail</a></code> is used in some logical disjunction.
 </p><p>Given the route and handler definitions above, one can then integrate
 with Snap via <code><a href="Snap-Routes.html#t:expandRoutes">expandRoutes</a></code>, which turns the
 <code><a href="Snap-Routes.html#t:Routes">Routes</a></code> monad into a list of
-<code><code><a href="/home/twittner/.cabal762/share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:MonadSnap">MonadSnap</a></code> m =&gt; [(ByteString, m ())]</code>.
+<code><code><a href="/home/twittner/workspaces/snap/predicates/cabal-dev//share/doc/snap-core-0.9.3.1/html/Snap-Core.html#t:MonadSnap">MonadSnap</a></code> m =&gt; [(ByteString, m ())]</code>.
 Additionally routes can be turned into Strings via <code><a href="Snap-Routes.html#t:showRoutes">showRoutes</a></code>.
 </p></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.13.2</p></div></body></html>
