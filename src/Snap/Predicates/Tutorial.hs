@@ -137,9 +137,9 @@ someHandler :: 'Snap.Core.Snap' ()
 someHandler = do
     req <- 'Snap.Core.getRequest'
     case 'Data.Predicate.eval' ('Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:&:' 'Snap.Predicates.Params.Param' \"baz\") req of
-        'Data.Predicate.T' (_ 'Data.Predicate.:*:' bazValue) -> ...
-        'Data.Predicate.F' (Just (i, msg))  -> ...
-        'Data.Predicate.F' Nothing          -> ...
+        'Data.Predicate.T' (_ 'Data.Predicate.:*:' bazValue)      -> ...
+        'Data.Predicate.F' (Just ('Snap.Predicates.Error' st msg)) -> ...
+        'Data.Predicate.F' Nothing               -> ...
 @
 
 However another possibility is to augment route definitions with the
@@ -150,7 +150,7 @@ sitemap :: 'Snap.Routes.Routes' Snap ()
 sitemap = do
     'Snap.Routes.get'  \"\/a\" handlerA $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Json' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:|:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
     'Snap.Routes.get'  \"\/b\" handlerB $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Text' 'Snap.Predicates.MediaTypes.Plain' 'Data.Predicate.:&:' ('Snap.Predicates.Param' \"name\" 'Data.Predicate.:||:' 'Snap.Predicates.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicates.Param' \"foo\"
-    'Snap.Routes.get'  \"\/c\" handlerC $ 'Data.Predicate.Fail' (410, Just \"Gone.\")
+    'Snap.Routes.get'  \"\/c\" handlerC $ 'Data.Predicate.Fail' ('Snap.Predicates.Error' 410 (Just \"Gone.\"))
     'Snap.Routes.post' \"\/d\" handlerD $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Protobuf'
     'Snap.Routes.post' \"\/e\" handlerE $ 'Snap.Predicates.MediaTypes.Accept' 'Snap.Predicates.MediaTypes.Application' 'Snap.Predicates.MediaTypes.Xml'
 @
