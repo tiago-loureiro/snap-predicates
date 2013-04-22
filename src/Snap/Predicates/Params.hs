@@ -14,6 +14,7 @@ import Data.Predicate
 import Snap.Core hiding (headers)
 import Snap.Predicates
 import Snap.Predicates.Internal
+import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 
 -- | A 'Predicate' looking for some parameter.
@@ -25,7 +26,7 @@ instance Predicate Param Request where
     apply (Param x) r =
         case params r x of
             []    -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
-            (v:_) -> return (T [] v)
+            (v:_) -> return (T D.empty v)
 
 instance Show Param where
     show (Param x) = "Param: " ++ show x
@@ -38,14 +39,14 @@ data ParamTrans a = ParamTrans ByteString ([ByteString] -> a)
 instance Typeable a => Predicate (ParamTrans a) Request where
     type FVal (ParamTrans a) = Error
     type TVal (ParamTrans a) = a
-    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T [])
+    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T D.empty)
       where
         work = case params r x of
             [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
             vs -> do
                 let result = f vs
                 E.insert ("paramtrans:" <> x) result
-                return (T [] result)
+                return (T D.empty result)
 
 instance Show (ParamTrans a) where
     show (ParamTrans x _) = "ParamTrans: " ++ show x

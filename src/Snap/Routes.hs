@@ -26,10 +26,12 @@ import Data.ByteString (ByteString)
 import Data.Either
 import Data.List hiding (head, delete)
 import Data.Predicate
+import Data.Predicate.Delta (Delta)
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicates
 import qualified Data.List as L
+import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 
 data Pack m where
@@ -55,7 +57,7 @@ addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          => Method
          -> ByteString        -- ^ path
          -> (TVal p -> m ())  -- ^ handler
-         -> p                 -- ^ predicate
+         -> p                 -- ^ 'Predicate'
          -> Routes m ()
 addRoute m r x p = Routes $ modify ((Route m r (Pack p x)):)
 
@@ -138,13 +140,9 @@ select g = do
 
     closest :: [Handler m] -> m ()
     closest xs =
-        let len = maximum . map (length . _delta) $ xs
-            xs' = map (\(Handler d m) -> Handler (stretch d len) m) xs
-            ord = sortBy (\a b -> sum (_delta a) `compare` sum (_delta b)) xs'
-        in _handler (L.head ord)
-
-    stretch :: [Double] -> Int -> [Double]
-    stretch ds i = ds ++ (take (i - length ds) [1.0, 1.0 ..])
+        let xs' = zip (map _handler xs) (D.normalise (map _delta xs))
+            ord = sortBy (\a b -> D.sum (snd a) `compare` D.sum (snd b)) xs'
+        in fst (L.head ord)
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do

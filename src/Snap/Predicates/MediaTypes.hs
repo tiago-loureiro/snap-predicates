@@ -66,6 +66,7 @@ import Data.Predicate
 import Snap.Core hiding (headers)
 import Snap.Predicates
 import Snap.Predicates.Internal
+import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 import qualified Snap.Predicates.Parsers.Accept as A
 
@@ -110,7 +111,7 @@ instance (MType t, MSubType s) => Predicate (Accept t s) Request where
                     <> fromString (show y)
                     <> "'."
 
-        delta m = [1.0 - _quality m]
+        delta m = D.singleton $ 1.0 - _quality m
 
 instance (Show t, Show s) => Show (Accept t s) where
     show (Accept t s) = "Accept: " ++ show t ++ "/" ++ show s

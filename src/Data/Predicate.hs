@@ -8,6 +8,7 @@ module Data.Predicate where
 import Prelude hiding (and, or)
 import Control.Applicative hiding (Const)
 import Control.Monad.State.Strict
+import Data.Predicate.Delta as Delta
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
 
@@ -17,20 +18,6 @@ data Boolean f t
   = F f       -- ^ logical False with some meta-data
   | T Delta t -- ^ logical True with some meta-data
   deriving (Eq, Show)
-
--- | 'Delta' is a measure of distance. It is (optionally)
--- used in predicates that evaluate to 'T' but not uniquely so, i.e.
--- different evaluations of 'T' are possible and they may differ in how
--- close they are to the ideal @T []@. The range of each 'Double' value
--- is [0.0, 1.0].
---
--- An example is content-negotiation. A HTTP request may specify
--- a preference list of various media-types. A predicate matching one
--- specific media-type evaluates to 'T', but other media-types may match
--- even better. To represent this ambivalence, the predicate will include
--- a delta value which can be used to decide which of the matching
--- predicates should be preferred.
-type Delta = [Double]
 
 -- | The 'Predicate' class declares the function 'apply' which
 -- evaluates the predicate against some value, returning a value
@@ -51,7 +38,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = return (T [] a)
+    apply (Const a) _     = return (T Delta.empty a)
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
@@ -72,6 +59,10 @@ instance Show f => Show (Fail f t) where
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. It requires the
 -- meta-data of each 'T'rue branch to be of the same type.
+--
+-- If both arguments evaluate to 'T' the one with the
+-- smaller 'Delta' will be preferred, or--if equal--the
+-- left-hand argument.
 data a :|: b = a :|: b
 
 instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Predicate (a :|: b) c
@@ -80,9 +71,10 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
     type TVal (a :|: b) = TVal a
     apply (a :|: b) r   = or <$> apply a r <*> apply b r
       where
-        or (T d t) _       = T d t
-        or (F   _) (T d t) = T d t
-        or (F   _) (F   f) = F f
+        or x@(T d0 _) y@(T d1 _) = if d1 < d0 then y else x
+        or x@(T _  _)   (F    _) = x
+        or (F      _) x@(T _  _) = x
+        or (F      _) x@(F    _) = x
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
@@ -92,6 +84,10 @@ type a :+: b = Either a b
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. The meta-data of
 -- each 'T'rue branch can be of different types.
+--
+-- If both arguments evaluate to 'T' the one with the
+-- smaller 'Delta' will be preferred, or--if equal--the
+-- left-hand argument.
 data a :||: b = a :||: b
 
 instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b) c
@@ -100,9 +96,10 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
     type TVal (a :||: b) = TVal a :+: TVal b
     apply (a :||: b) r   = or <$> apply a r <*> apply b r
       where
-        or (T d t) _       = T d (Left  t)
-        or (F   _) (T d t) = T d (Right t)
-        or (F   _) (F   f) = F f
+        or (T d0 t0) (T d1 t1) = if d1 < d0 then T d1 (Right t1) else T d0 (Left t0)
+        or (T  d  t) (F     _) = T d (Left t)
+        or (F     _) (T  d  t) = T d (Right t)
+        or (F     _) (F     f) = F f
 
 instance (Show a, Show b) => Show (a :||: b) where
     show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
@@ -120,7 +117,7 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
     type TVal (a :&: b) = TVal a :*: TVal b
     apply (a :&: b) r   = and <$> apply a r <*> apply b r
       where
-        and (T d x) (T w y) = T (d ++ w) (x :*: y)
+        and (T d x) (T w y) = T (d +++ w) (x :*: y)
         and (T _ _) (F   f) = F f
         and (F   f) _       = F f
 
