@@ -4,10 +4,12 @@
 module Snap.Predicates.Params
   ( Param (..)
   , ParamTrans (..)
+  , ParamGuard (..)
   )
 where
 
 import Data.ByteString (ByteString)
+import Data.List (find)
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
@@ -39,7 +41,8 @@ data ParamTrans a = ParamTrans ByteString ([ByteString] -> a)
 instance Typeable a => Predicate (ParamTrans a) Request where
     type FVal (ParamTrans a) = Error
     type TVal (ParamTrans a) = a
-    apply (ParamTrans x f) r = E.lookup ("paramtrans:" <> x) >>= maybe work (return . T D.empty)
+    apply (ParamTrans x f) r =
+        E.lookup ("paramtrans:" <> x) >>= maybe work (return . T D.empty)
       where
         work = case params r x of
             [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
@@ -50,3 +53,24 @@ instance Typeable a => Predicate (ParamTrans a) Request where
 
 instance Show (ParamTrans a) where
     show (ParamTrans x _) = "ParamTrans: " ++ show x
+
+data ParamGuard = ParamGuard (ByteString -> Bool) ByteString
+
+instance Predicate ParamGuard Request where
+    type FVal ParamGuard = Error
+    type TVal ParamGuard = ByteString
+    apply (ParamGuard f x) r =
+        E.lookup ("paramguard:" <> x) >>= maybe work (return . T D.empty)
+      where
+        work = case params r x of
+            [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
+            vs -> maybe failure success (find f vs)
+
+        success p = do
+            E.insert ("paramguard:" <> x) p
+            return (T D.empty p)
+
+        failure = return (F (err 400 ("Invalid parameter '" <> x <> "'.")))
+
+instance Show ParamGuard where
+    show (ParamGuard _ x) = "ParamGuard: " ++ show x
