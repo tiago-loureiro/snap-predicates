@@ -7,19 +7,27 @@ module Snap.Routes
   ( Routes
   , showRoutes
   , expandRoutes
-  , get
-  , Snap.Routes.head
   , addRoute
+  , get
+  , get_
+  , Snap.Routes.head
+  , head_
   , post
+  , post_
   , put
+  , put_
   , delete
+  , delete_
   , trace
+  , trace_
   , options
+  , options_
   , connect
+  , connect_
   )
 where
 
-import Control.Applicative
+import Control.Applicative hiding (Const)
 import Control.Monad
 import Control.Monad.State.Strict hiding (get, put)
 import Data.ByteString (ByteString)
@@ -75,6 +83,20 @@ delete  = addRoute DELETE
 trace   = addRoute TRACE
 options = addRoute OPTIONS
 connect = addRoute CONNECT
+
+get_, head_, post_, put_, delete_, trace_, options_, connect_ ::
+    (MonadSnap m)
+    => ByteString    -- ^ path
+    -> (() -> m ())  -- ^ handler
+    -> Routes m ()
+get_     p h = addRoute GET     p h (Const ())
+head_    p h = addRoute HEAD    p h (Const ())
+post_    p h = addRoute POST    p h (Const ())
+put_     p h = addRoute PUT     p h (Const ())
+delete_  p h = addRoute DELETE  p h (Const ())
+trace_   p h = addRoute TRACE   p h (Const ())
+options_ p h = addRoute OPTIONS p h (Const ())
+connect_ p h = addRoute CONNECT p h (Const ())
 
 -- | Turn route definitions into a list of 'String's.
 showRoutes :: Routes m () -> [String]
