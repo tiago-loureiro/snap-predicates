@@ -54,6 +54,9 @@ instance Typeable a => Predicate (ParamTrans a) Request where
 instance Show (ParamTrans a) where
     show (ParamTrans x _) = "ParamTrans: " ++ show x
 
+-- | ParamGuard is returning as 'TVal' the parameter value which
+-- satisfies the given predicate function @ByteString -> Bool@, or
+-- else it returns a status of 400 in 'Error'.
 data ParamGuard = ParamGuard (ByteString -> Bool) ByteString
 
 instance Predicate ParamGuard Request where
