@@ -4,20 +4,22 @@
 module Snap.Predicates.Params
   ( Parameter (..)
   , Param (..)
-  , ParamGuard (..)
+  , ParamOpt (..)
   )
 where
 
 import Data.ByteString (ByteString)
-import Data.List (find)
+import Data.Either
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
+import Data.Predicate.Readable
 import Snap.Core hiding (headers)
 import Snap.Predicates
 import Snap.Predicates.Internal
 import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
+import qualified Data.ByteString as S
 
 -- | The most generic request parameter predicate provided.
 -- It will get all request parameter values of '_name' and pass them on to
@@ -38,7 +40,9 @@ instance Typeable a => Predicate (Parameter a) Request where
         E.lookup (key nme) >>= maybe work result
       where
         work = case params r nme of
-            [] -> return (F (err 400 ("Missing parameter '" <> nme <> "'.")))
+            [] -> maybe (return (F (err 400 ("Missing parameter '" <> nme <> "'."))))
+                        (return . (T D.empty))
+                        def
             vs -> do
                 let x = f vs
                 E.insert (key nme) x
@@ -55,29 +59,32 @@ instance Show (Parameter a) where
     show p = "Parameter: " ++ show (_name p)
 
 -- | Specialisation of 'Parameter' which returns the first request
--- parameter value as is.
-data Param = Param ByteString deriving Eq
+-- which could be converted to the target type.
+data Param a = Param ByteString
 
-instance Predicate Param Request where
-    type FVal Param = Error
-    type TVal Param = ByteString
-    apply (Param x) = apply (Parameter x (Right . head) Nothing)
+instance (Typeable a, Readable a) => Predicate (Param a) Request where
+    type FVal (Param a) = Error
+    type TVal (Param a) = a
+    apply (Param x)     = apply (Parameter x f Nothing)
+      where
+        f vs = let (es, xs) = partitionEithers $ map fromByteString vs
+               in if null xs
+                      then Left (S.intercalate "\n" es)
+                      else Right (head xs)
 
-instance Show Param where
+instance Show (Param a) where
     show (Param x) = "Param: " ++ show x
 
--- | Specialisation of 'Parameter' which returns the first request
--- parameter satisfying the provided predicate function as is.
-data ParamGuard = ParamGuard ByteString (ByteString -> Bool)
 
-instance Predicate ParamGuard Request where
-    type FVal ParamGuard   = Error
-    type TVal ParamGuard   = ByteString
-    apply (ParamGuard x f) = apply (Parameter x fun Nothing)
+data ParamOpt a = ParamOpt ByteString
+
+instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
+    type FVal (ParamOpt a) = Error
+    type TVal (ParamOpt a) = Maybe a
+    apply (ParamOpt x)     = apply (Parameter x f (Just Nothing))
       where
-        fun vs = case find f vs of
-           Nothing -> Left ("Invalid parameter: '" <> x <> "'.")
-           Just  v -> Right v
+        f vs = let xs = rights $ map fromByteString vs
+               in if null xs then Right Nothing else Right (head xs)
 
-instance Show ParamGuard where
-    show (ParamGuard x _) = "ParamGuard: " ++ show x
+instance Show (ParamOpt a) where
+    show (ParamOpt x) = "ParamOpt: " ++ show x

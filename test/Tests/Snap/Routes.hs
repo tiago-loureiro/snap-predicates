@@ -9,6 +9,7 @@ import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Either
 import Data.Predicate
+import Data.String
 import Data.Text (Text, strip)
 import Data.Text.Encoding
 import Snap.Core
@@ -29,7 +30,7 @@ tests =
 testSitemap :: Test
 testSitemap = testCase "Sitemap" $ do
     let routes = expandRoutes sitemap
-    assertEqual "Endpoints" ["/a", "/b", "/c", "/d"] (map fst routes)
+    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e"] (map fst routes)
     mapM_ (\(r, h) -> h r) (zip (map snd routes) [testEndpointA])
 
 sitemap :: Routes Snap ()
@@ -43,6 +44,8 @@ sitemap = do
     get "/c" handlerC $ Fail (err 410 "Gone.")
 
     post "/d" handlerD $ Accept Application Json :&: Parameter "foo" decode Nothing
+
+    get "/e" handlerE $ (Param "foo" :|: Const 0) :&: ParamOpt "bar"
   where
     decode bs =
         let txt = rights (map decodeUtf8' bs)
@@ -50,8 +53,8 @@ sitemap = do
                then Left "UTF-8 decoding error"
                else Right (map strip txt)
 
-handlerA :: MediaType Application Json :*: ByteString :*: ByteString -> Snap ()
-handlerA (_ :*: _ :*: _) = return ()
+handlerA :: MediaType Application Json :*: Int :*: ByteString -> Snap ()
+handlerA (_ :*: i :*: _) = writeText (fromString . show $ i)
 
 handlerB :: MediaType Application Json :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
 handlerB (_ :*: name :*: _) =
@@ -62,11 +65,16 @@ handlerB (_ :*: name :*: _) =
 handlerC :: MediaType Application Json -> Snap ()
 handlerC _ = do
     rq <- getRequest
-    with (Param "bar" :&: Param "baz") rq $ \(bar :*: _) ->
+    with (Param "bar" :&: Param "baz") rq $ \(bar :*: baz) -> do
         writeBS bar
+        writeBS baz
 
 handlerD :: MediaType Application Json :*: [Text] -> Snap ()
 handlerD (_ :*: txt) = writeText $ Text.intercalate ", " txt
+
+handlerE :: Int :*: Maybe ByteString -> Snap ()
+handlerE (foo :*: Just bar) = writeText (Text.pack . show $ foo) >> writeBS bar
+handlerE (_   :*: Nothing)  = return ()
 
 testEndpointA :: Snap () -> Assertion
 testEndpointA m = do
@@ -83,7 +91,7 @@ testEndpointA m = do
     st2 <- rspStatus <$> T.runHandler rq2 m
     assertEqual "Param fails" 400 st2
 
-    let rq3 = T.get "/a" (M.fromList [("name", ["x"]), ("foo", ["y"])]) >>
+    let rq3 = T.get "/a" (M.fromList [("name", ["123"]), ("foo", ["y"])]) >>
               T.addHeader "Accept" "application/json"
     T.runHandler rq3 m >>= T.assertSuccess
 

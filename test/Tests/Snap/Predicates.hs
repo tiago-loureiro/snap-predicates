@@ -4,6 +4,7 @@ module Tests.Snap.Predicates (tests) where
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
+import Data.ByteString (ByteString)
 import Data.Predicate
 import Data.Predicate.Delta
 import Snap.Predicates
@@ -16,6 +17,7 @@ tests :: [Test]
 tests =
     [ testAccept
     , testParam
+    , testParamOpt
     , testAcceptJson
     , testAcceptThrift
     ]
@@ -59,9 +61,17 @@ testAcceptThrift = testCase "AcceptThrift Predicate" $ do
 testParam :: Test
 testParam = testCase "Param Predicate" $ do
     rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
-    assertEqual "Matching Param" (T empty "y") (eval (Param "x") rq0)
+    assertEqual "Matching Param" (T empty "y") (eval (Param "x" :: Param ByteString) rq0)
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 400"
         (F (err 400 ("Missing parameter 'x'.")))
-        (eval (Param "x") rq1)
+        (eval (Param "x" :: Param ByteString) rq1)
+
+testParamOpt :: Test
+testParamOpt = testCase "ParamOpt Predicate" $ do
+    rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
+    assertEqual "Matching Param 1" (T empty (Just "y")) (eval (ParamOpt "x" :: ParamOpt ByteString) rq0)
+
+    rq1 <- buildRequest $ get "/" M.empty
+    assertEqual "Matching Param 2" (T empty Nothing) (eval (ParamOpt "x" :: ParamOpt ByteString) rq1)
