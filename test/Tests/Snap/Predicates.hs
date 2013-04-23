@@ -63,5 +63,5 @@ testParam = testCase "Param Predicate" $ do
 
     rq1 <- buildRequest $ get "/" M.empty
     assertEqual "Status Code 400"
-        (F (err 400 ("Expected parameter 'x'.")))
+        (F (err 400 ("Missing parameter 'x'.")))
         (eval (Param "x") rq1)

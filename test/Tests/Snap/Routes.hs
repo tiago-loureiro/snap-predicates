@@ -7,6 +7,7 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
+import Data.Either
 import Data.Predicate
 import Data.Text (Text, strip)
 import Data.Text.Encoding
@@ -41,7 +42,13 @@ sitemap = do
 
     get "/c" handlerC $ Fail (err 410 "Gone.")
 
-    post "/d" handlerD $ Accept Application Json :&: ParamTrans "foo" (map (strip . decodeUtf8))
+    post "/d" handlerD $ Accept Application Json :&: Parameter "foo" decode Nothing
+  where
+    decode bs =
+        let txt = rights (map decodeUtf8' bs)
+        in if null txt
+               then Left "UTF-8 decoding error"
+               else Right (map strip txt)
 
 handlerA :: MediaType Application Json :*: ByteString :*: ByteString -> Snap ()
 handlerA (_ :*: _ :*: _) = return ()

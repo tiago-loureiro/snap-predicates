@@ -2,8 +2,8 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Snap.Predicates.Params
-  ( Param (..)
-  , ParamTrans (..)
+  ( Parameter (..)
+  , Param (..)
   , ParamGuard (..)
   )
 where
@@ -19,61 +19,65 @@ import Snap.Predicates.Internal
 import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 
--- | A 'Predicate' looking for some parameter.
+-- | The most generic request parameter predicate provided.
+-- It will get all request parameter values of '_name' and pass them on to
+-- the conversion function '_read', which might either yield an error
+-- message or a value. In case of error, an optional default may be
+-- returned instead, if nothing is provided, the error message will be used
+-- when construction the 400 status.
+data Parameter a = Parameter
+  { _name    :: !ByteString                         -- ^ request parameter name
+  , _read    :: [ByteString] -> Either ByteString a -- ^ conversion function
+  , _default :: !(Maybe a)                          -- ^ (optional) default value
+  }
+
+instance Typeable a => Predicate (Parameter a) Request where
+    type FVal (Parameter a) = Error
+    type TVal (Parameter a) = a
+    apply (Parameter nme f def) r =
+        E.lookup (key nme) >>= maybe work result
+      where
+        work = case params r nme of
+            [] -> return (F (err 400 ("Missing parameter '" <> nme <> "'.")))
+            vs -> do
+                let x = f vs
+                E.insert (key nme) x
+                case x of
+                    Left msg -> return $ maybe (F (err 400 msg)) (T D.empty) def
+                    Right  v -> return $ T D.empty v
+
+        result (Left msg) = return (F (err 400 msg))
+        result (Right  v) = return (T D.empty v)
+
+        key = ("parameter:" <>)
+
+instance Show (Parameter a) where
+    show p = "Parameter: " ++ show (_name p)
+
+-- | Specialisation of 'Parameter' which returns the first request
+-- parameter value as is.
 data Param = Param ByteString deriving Eq
 
 instance Predicate Param Request where
     type FVal Param = Error
     type TVal Param = ByteString
-    apply (Param x) r =
-        case params r x of
-            []    -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
-            (v:_) -> return (T D.empty v)
+    apply (Param x) = apply (Parameter x (Right . head) Nothing)
 
 instance Show Param where
     show (Param x) = "Param: " ++ show x
 
--- | A 'Predicate' looking for some parameter, and returning as
--- 'TVal' the result of applying the given function to all
--- parameter values.
-data ParamTrans a = ParamTrans ByteString ([ByteString] -> a)
-
-instance Typeable a => Predicate (ParamTrans a) Request where
-    type FVal (ParamTrans a) = Error
-    type TVal (ParamTrans a) = a
-    apply (ParamTrans x f) r =
-        E.lookup ("paramtrans:" <> x) >>= maybe work (return . T D.empty)
-      where
-        work = case params r x of
-            [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
-            vs -> do
-                let result = f vs
-                E.insert ("paramtrans:" <> x) result
-                return (T D.empty result)
-
-instance Show (ParamTrans a) where
-    show (ParamTrans x _) = "ParamTrans: " ++ show x
-
--- | ParamGuard is returning as 'TVal' the parameter value which
--- satisfies the given predicate function @ByteString -> Bool@, or
--- else it returns a status of 400 in 'Error'.
-data ParamGuard = ParamGuard (ByteString -> Bool) ByteString
+-- | Specialisation of 'Parameter' which returns the first request
+-- parameter satisfying the provided predicate function as is.
+data ParamGuard = ParamGuard ByteString (ByteString -> Bool)
 
 instance Predicate ParamGuard Request where
-    type FVal ParamGuard = Error
-    type TVal ParamGuard = ByteString
-    apply (ParamGuard f x) r =
-        E.lookup ("paramguard:" <> x) >>= maybe work (return . T D.empty)
+    type FVal ParamGuard   = Error
+    type TVal ParamGuard   = ByteString
+    apply (ParamGuard x f) = apply (Parameter x fun Nothing)
       where
-        work = case params r x of
-            [] -> return (F (err 400 ("Expected parameter '" <> x <> "'.")))
-            vs -> maybe failure success (find f vs)
-
-        success p = do
-            E.insert ("paramguard:" <> x) p
-            return (T D.empty p)
-
-        failure = return (F (err 400 ("Invalid parameter '" <> x <> "'.")))
+        fun vs = case find f vs of
+           Nothing -> Left ("Invalid parameter: '" <> x <> "'.")
+           Just  v -> Right v
 
 instance Show ParamGuard where
-    show (ParamGuard _ x) = "ParamGuard: " ++ show x
+    show (ParamGuard x _) = "ParamGuard: " ++ show x
