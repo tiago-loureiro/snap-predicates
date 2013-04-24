@@ -5,6 +5,7 @@ module Snap.Predicates.Params
   ( Parameter (..)
   , Param (..)
   , ParamOpt (..)
+  , ParamDef (..)
   )
 where
 
@@ -15,7 +16,7 @@ import Data.Typeable
 import Data.Predicate
 import Data.Predicate.Readable
 import Snap.Core hiding (headers)
-import Snap.Predicates
+import Snap.Predicates.Error
 import Snap.Predicates.Internal
 import qualified Data.Predicate.Env as E
 import qualified Data.ByteString as S
@@ -87,3 +88,13 @@ instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
 
 instance Show (ParamOpt a) where
     show (ParamOpt x) = "ParamOpt: " ++ show x
+
+data ParamDef a = ParamDef ByteString a
+
+instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
+    type FVal (ParamDef a) = Error
+    type TVal (ParamDef a) = a
+    apply (ParamDef x d)   = apply (Param x :|: Const d)
+
+instance Show a => Show (ParamDef a) where
+    show (ParamDef x d) = "ParamDef: " ++ show x ++ " [" ++ show d ++ "]"

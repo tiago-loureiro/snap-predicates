@@ -1,16 +1,14 @@
-{-# LANGUAGE BangPatterns #-}
-module Snap.Predicates where
+module Snap.Predicates
+  ( module Snap.Predicates.Error
+  , module Snap.Predicates.Accept
+  , module Snap.Predicates.Content
+  , module Snap.Predicates.MediaTypes
+  , module Snap.Predicates.Params
+  )
+where
 
-import Data.ByteString (ByteString)
-import Data.Word
-
--- | The error type used as 'F' meta-data in all snap predicates.
-data Error = Error
-  { _status  :: !Word               -- ^ (HTTP) status code
-  , _message :: !(Maybe ByteString) -- ^ optional status message
-  } deriving (Eq, Show)
-
--- | Convenience function to construct 'Error' values from
--- status code and status message.
-err :: Word -> ByteString -> Error
-err s = Error s . Just
+import Snap.Predicates.Error
+import Snap.Predicates.Accept
+import Snap.Predicates.Content
+import Snap.Predicates.MediaTypes
+import Snap.Predicates.Params

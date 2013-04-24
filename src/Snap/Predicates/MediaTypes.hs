@@ -8,9 +8,6 @@ module Snap.Predicates.MediaTypes
   , MSubType (..)
   , MediaType (..)
 
-  -- * Predicate
-  , Accept (..)
-
   -- * Media-Types
   , Type (..)
   , All (..)
@@ -56,18 +53,7 @@ module Snap.Predicates.MediaTypes
   )
 where
 
-import Control.Monad
 import Data.ByteString (ByteString)
-import Data.List (sortBy)
-import Data.Maybe
-import Data.Monoid hiding (All)
-import Data.String
-import Data.Predicate
-import Snap.Core hiding (headers)
-import Snap.Predicates
-import Snap.Predicates.Internal
-import qualified Data.Predicate.Env as E
-import qualified Snap.Predicates.Parsers.Accept as A
 
 -- | Type-class for converting a 'ByteString' to a media-type.
 class (Show a, Eq a) => MType a where
@@ -84,42 +70,6 @@ data MediaType t s = MediaType
   , _quality :: !Double
   , _params  :: ![(ByteString, ByteString)]
   } deriving (Eq, Show)
-
--- | A 'Predicate' against the 'Request's "Accept" header.
-data Accept t s = Accept t s deriving Eq
-
-instance (MType t, MSubType s) => Predicate (Accept t s) Request where
-    type FVal (Accept t s) = Error
-    type TVal (Accept t s) = MediaType t s
-    apply (Accept x y) r   = do
-        mtypes <- E.lookup "accept" >>= maybe readMediaTypes return
-        case mediaType x y mtypes of
-               Just m  -> return (T (1.0 - _quality m) m)
-               Nothing -> return (F (err 406 message))
-      where
-        readMediaTypes = do
-            let mtypes = sortBy q . concat . map A.parseMediaTypes $ headers r "accept"
-            E.insert "accept" mtypes
-            return mtypes
-
-        q a b = A.medQuality b `compare` A.medQuality a
-
-        message = "Expected 'Accept: "
-                    <> fromString (show x)
-                    <> "/"
-                    <> fromString (show y)
-                    <> "'."
-
-instance (Show t, Show s) => Show (Accept t s) where
-    show (Accept t s) = "Accept: " ++ show t ++ "/" ++ show s
-
-mediaType :: (MType t, MSubType s) => t -> s -> [A.MediaType] -> Maybe (MediaType t s)
-mediaType t s = safeHead . mapMaybe (\m -> do
-    t' <- if A.medType    m == "*" then Just t else toType t    (A.medType m)
-    s' <- if A.medSubtype m == "*" then Just s else toSubType s (A.medSubtype m)
-    guard (t == t' && s == s')
-    return $ MediaType t s (A.medQuality m) (A.medParams m))
-
 
 -- Media-Types:
 

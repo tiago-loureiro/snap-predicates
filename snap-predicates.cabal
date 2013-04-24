@@ -29,13 +29,17 @@ library
       , Data.Predicate.Env
       , Data.Predicate.Readable
       , Snap.Predicates
+      , Snap.Predicates.Accept
+      , Snap.Predicates.Error
       , Snap.Predicates.Params
+      , Snap.Predicates.Content
       , Snap.Predicates.MediaTypes
       , Snap.Predicates.Tutorial
       , Snap.Routes
 
     other-modules:
         Snap.Predicates.Internal
+        Snap.Predicates.MediaTypes.Internal
       , Snap.Predicates.Parsers.Accept
       , Snap.Predicates.Parsers.Shared
 

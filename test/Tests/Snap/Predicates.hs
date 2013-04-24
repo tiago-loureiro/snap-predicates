@@ -7,8 +7,6 @@ import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Predicate
 import Snap.Predicates
-import Snap.Predicates.Params
-import Snap.Predicates.MediaTypes
 import Snap.Test
 import qualified Data.Map.Strict as M
 
