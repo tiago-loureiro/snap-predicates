@@ -17,7 +17,6 @@ import Data.Predicate.Readable
 import Snap.Core hiding (headers)
 import Snap.Predicates
 import Snap.Predicates.Internal
-import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 import qualified Data.ByteString as S
 
@@ -41,17 +40,17 @@ instance Typeable a => Predicate (Parameter a) Request where
       where
         work = case params r nme of
             [] -> maybe (return (F (err 400 ("Missing parameter '" <> nme <> "'."))))
-                        (return . (T D.empty))
+                        (return . (T 0))
                         def
             vs -> do
                 let x = f vs
                 E.insert (key nme) x
                 case x of
-                    Left msg -> return $ maybe (F (err 400 msg)) (T D.empty) def
-                    Right  v -> return $ T D.empty v
+                    Left msg -> return $ maybe (F (err 400 msg)) (T 0) def
+                    Right  v -> return $ T 0 v
 
         result (Left msg) = return (F (err 400 msg))
-        result (Right  v) = return (T D.empty v)
+        result (Right  v) = return (T 0 v)
 
         key = ("parameter:" <>)
 

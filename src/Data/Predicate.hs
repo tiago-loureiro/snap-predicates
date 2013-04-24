@@ -8,9 +8,21 @@ module Data.Predicate where
 import Prelude hiding (and, or)
 import Control.Applicative hiding (Const)
 import Control.Monad.State.Strict
-import Data.Predicate.Delta as Delta
 import Data.Predicate.Env (Env)
 import qualified Data.Predicate.Env as E
+
+-- | 'Delta' is a measure of distance. It is (optionally)
+-- used in predicates that evaluate to 'T' but not uniquely so, i.e.
+-- different evaluations of 'T' are possible and they may have a different
+-- \"fitness\".
+--
+-- An example is content-negotiation. A HTTP request may specify
+-- a preference list of various media-types. A predicate matching one
+-- specific media-type evaluates to 'T', but other media-types may match
+-- even better. To represent this ambivalence, the predicate will include
+-- a delta value which can be used to decide which of the matching
+-- predicates should be preferred.
+type Delta = Double
 
 -- | A 'Bool'-like type where each branch 'T'rue or 'F'alse carries
 -- some meta-data which is threaded through 'Predicate' evaluation.
@@ -38,7 +50,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = return (T Delta.empty a)
+    apply (Const a) _     = return (T 0 a)
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
@@ -117,7 +129,7 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
     type TVal (a :&: b) = TVal a :*: TVal b
     apply (a :&: b) r   = and <$> apply a r <*> apply b r
       where
-        and (T d x) (T w y) = T (d +++ w) (x :*: y)
+        and (T d x) (T w y) = T (d + w) (x :*: y)
         and (T _ _) (F   f) = F f
         and (F   f) _       = F f
 

@@ -26,7 +26,6 @@ library
 
     exposed-modules:
         Data.Predicate
-      , Data.Predicate.Delta
       , Data.Predicate.Env
       , Data.Predicate.Readable
       , Snap.Predicates

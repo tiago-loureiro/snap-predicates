@@ -34,12 +34,10 @@ import Data.ByteString (ByteString)
 import Data.Either
 import Data.List hiding (head, delete)
 import Data.Predicate
-import Data.Predicate.Delta (Delta)
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicates
 import qualified Data.List as L
-import qualified Data.Predicate.Delta as D
 import qualified Data.Predicate.Env as E
 
 data Pack m where
@@ -161,10 +159,7 @@ select g = do
                     (T d v, e') -> (e', Right (Handler d (h v)) : rs)
 
     closest :: [Handler m] -> m ()
-    closest xs =
-        let xs' = zip (map _handler xs) (D.normalise (map _delta xs))
-            ord = sortBy (\a b -> D.sum (snd a) `compare` D.sum (snd b)) xs'
-        in fst (L.head ord)
+    closest xs = _handler . L.head $ sortBy (\a b -> _delta a `compare` _delta b) xs
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do

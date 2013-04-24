@@ -33,14 +33,14 @@ and 'Data.Predicate.F' \-\- meta-data for each case:
 @
 data 'Data.Predicate.Boolean' f t =
     'Data.Predicate.F' (Maybe f)
-  | 'Data.Predicate.T' 'Data.Predicate.Delta.Delta' t
+  | 'Data.Predicate.T' 'Data.Predicate.Delta' t
   deriving (Eq, Show)
 @
 
-'Data.Predicate.Delta.Delta' can in most instances be ignored, i.e. set to 'Data.Predicate.Delta.empty'.
+'Data.Predicate.Delta' can in most instances be ignored, i.e. set to 0.
 It's purpose is as a measure of distance for those predicates which evaluate
 to 'Data.Predicate.T' but some may be \"closer\" in some way than others. An
-example is for instance HTTP content-negotiations (cf.  'Snap.Predicates.MediaTypes.Accept')
+example is for instance HTTP content-negotiations (cf. 'Snap.Predicates.MediaTypes.Accept')
 
 Further there is a type-class 'Data.Predicate.Predicate' defined which
 contains an evaluation function 'Data.Predicate.apply', where the
@@ -78,7 +78,7 @@ logical @AND@ of its parts. These are:
 
 Besides evaluating to 'Data.Predicate.T' or 'Data.Predicate.F' depending
 on the truth values of its parts, these connectives also propagate the
-meta-data and 'Data.Predicate.Delta.Delta' appropriately.
+meta-data and 'Data.Predicate.Delta' appropriately.
 
 If 'Data.Predicate.:&:' evaluates to 'Data.Predicate.T' it has to combine
 the meta-data of both predicates, and it uses the product type
