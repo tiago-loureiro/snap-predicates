@@ -12,6 +12,7 @@ where
 import Data.ByteString (ByteString)
 import Data.Either
 import Data.Monoid
+import Data.String
 import Data.Typeable
 import Data.Predicate
 import Data.Predicate.Readable
@@ -53,7 +54,7 @@ instance Typeable a => Predicate (Parameter a) Request where
         result (Left msg) = return (F (err 400 msg))
         result (Right  v) = return (T 0 v)
 
-        key = ("parameter:" <>)
+        key name = "parameter:" <> name <> ":" <> (fromString . show . typeOf $ def)
 
 instance Show (Parameter a) where
     show p = "Parameter: " ++ show (_name p)
