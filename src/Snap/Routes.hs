@@ -37,8 +37,10 @@ import Data.Predicate
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicates
+import Snap.Predicates.Internal
 import qualified Data.List as L
 import qualified Data.Predicate.Env as E
+import qualified Data.ByteString as S
 
 data Pack m where
     Pack :: (Show p, Predicate p Request, FVal p ~ Error)
@@ -116,13 +118,29 @@ expandRoutes (Routes routes) =
 
 -- | Group routes by path.
 normalise :: [Route m] -> [[Route m]]
-normalise = grouped . sorted
+normalise rr =
+    let rg    = grouped . sorted $ rr
+        paths = map (namelessPath . L.head) rg
+        ambig = paths \\ nub paths
+    in if null ambig then rg else error (ambiguityMessage ambig)
   where
     sorted :: [Route m] -> [Route m]
     sorted = sortBy (\a b -> _path a `compare` _path b)
 
     grouped :: [Route m] -> [[Route m]]
     grouped = groupBy (\a b -> _path a == _path b)
+
+    namelessPath :: Route m -> ByteString
+    namelessPath =
+        let colon = 0x3A
+            slash = 0x2F
+            fun s = if s /= "" && S.head s == colon then ":" else s
+        in S.intercalate "/" . map fun . S.split slash . _path
+
+    ambiguityMessage a =
+        "Paths differing only in variable names are not supported.\n"  ++
+        "Problematic paths (with variable positions denoted by <>):\n" ++
+        (show (map (replace ':' "<>") a))
 
 data Handler m = Handler
   { _delta   :: !Delta
