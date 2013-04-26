@@ -39,4 +39,3 @@ instance (MType t, MSubType s) => Predicate (ContentType t s) Request where
 
 instance (Show t, Show s) => Show (ContentType t s) where
     show (ContentType t s) = "ContentType: " ++ show t ++ "/" ++ show s
-

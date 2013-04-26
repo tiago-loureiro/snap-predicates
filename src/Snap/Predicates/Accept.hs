@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE BangPatterns          #-}
 module Snap.Predicates.Accept
   ( Accept (..)
   , module Snap.Predicates.MediaTypes

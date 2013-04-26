@@ -76,7 +76,9 @@ instance (Typeable a, Readable a) => Predicate (Param a) Request where
 instance Show (Param a) where
     show (Param x) = "Param: " ++ show x
 
-
+-- | Like 'Param', but denoting an optional parameter, i.e. if the
+-- parameter is not present or can not be converted to the target type, the
+-- predicate will still succeed.
 data ParamOpt a = ParamOpt ByteString
 
 instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
@@ -90,6 +92,10 @@ instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
 instance Show (ParamOpt a) where
     show (ParamOpt x) = "ParamOpt: " ++ show x
 
+-- | Like 'Param', but in case the parameter could not be found, the
+-- provided default value will be used. ParamDef is provided for
+-- convenience and nothing else than Param || Const, e.g.
+-- @ParamDef \"foo\" 0 == Param \"foo\" ':|:' 'Const' 0@.
 data ParamDef a = ParamDef ByteString a
 
 instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
