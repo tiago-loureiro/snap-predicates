@@ -107,6 +107,13 @@ showRoutes (Routes routes) =
                       . (' ':)
                       . shows p $ ""
 
+-- | Turn route definitions into \"snapable\" format, i.e.
+-- Routes are grouped per path and selection evaluates routes
+-- against the given Snap 'Request'.
+expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
+expandRoutes (Routes routes) =
+    map (\g -> (_path (L.head g), select g)) (normalise $ execState routes [])
+
 -- | Group routes by path.
 normalise :: [Route m] -> [[Route m]]
 normalise = grouped . sorted
@@ -116,13 +123,6 @@ normalise = grouped . sorted
 
     grouped :: [Route m] -> [[Route m]]
     grouped = groupBy (\a b -> _path a == _path b)
-
--- | Turn route definitions into \"snapable\" format, i.e.
--- Routes are grouped per path and selection evaluates routes
--- against the given Snap 'Request'.
-expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
-expandRoutes (Routes routes) =
-    map (\g -> (_path (L.head g), select g)) (normalise $ execState routes [])
 
 data Handler m = Handler
   { _delta   :: !Delta
@@ -160,8 +160,10 @@ select g = do
                     (F   m, e') -> (e', Left m : rs)
                     (T d v, e') -> (e', Right (Handler d (h v)) : rs)
 
-    closest :: [Handler m] -> m ()
-    closest xs = _handler . L.head $ sortBy (\a b -> _delta a `compare` _delta b) xs
+    closest :: MonadSnap m => [Handler m] -> m ()
+    closest = foldl' (<|>) pass
+            . map _handler
+            . sortBy (\a b -> _delta a `compare` _delta b)
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do
