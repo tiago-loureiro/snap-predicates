@@ -26,7 +26,7 @@ testAccept = testCase "Accept Predicate" $ do
     let true = T 0 $ MediaType (Type "x") (SubType "y") 1.0 []
     assertEqual "Matching Accept" true (eval predicate rq0)
 
-    rq1 <- buildRequest $ get "/" M.empty
+    rq1 <- buildRequest $ addHeader "Accept" "u/v"
     assertEqual "Status Code 406"
         (F (err 406 ("Expected 'Accept: \"x\"/\"y\"'.")))
         (eval predicate rq1)
@@ -38,7 +38,7 @@ testAcceptJson = testCase "AcceptJson Predicate" $ do
     let true = T 0 $ MediaType Application Json 1.0 []
     assertEqual "Matching AcceptJson" true (eval predicate rq0)
 
-    rq1 <- buildRequest $ addHeader "Accept" "foo"
+    rq1 <- buildRequest $ addHeader "Accept" "foo/bar"
     assertEqual "Status Code 406"
         (F (err 406 ("Expected 'Accept: application/json'.")))
         (eval predicate rq1)

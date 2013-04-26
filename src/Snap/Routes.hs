@@ -99,8 +99,7 @@ connect_ p h = addRoute CONNECT p h (Const ())
 -- | Turn route definitions into a list of 'String's.
 showRoutes :: Routes m () -> [String]
 showRoutes (Routes routes) =
-    let rs = reverse $ execState routes []
-    in flip map rs $ \x ->
+    flip map (concat . normalise $ execState routes []) $ \x ->
         case _pred x of
             Pack p _ -> shows (_method x)
                       . (' ':)
@@ -108,19 +107,22 @@ showRoutes (Routes routes) =
                       . (' ':)
                       . shows p $ ""
 
--- | Turn route definitions into \"snapable\" format, i.e.
--- Routes are grouped per path and selection evaluates routes
--- against the given Snap 'Request'.
-expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
-expandRoutes (Routes routes) =
-    let rg = grouped . sorted $ execState routes []
-    in map (\g -> (_path (L.head g), select g)) rg
+-- | Group routes by path.
+normalise :: [Route m] -> [[Route m]]
+normalise = grouped . sorted
   where
     sorted :: [Route m] -> [Route m]
     sorted = sortBy (\a b -> _path a `compare` _path b)
 
     grouped :: [Route m] -> [[Route m]]
     grouped = groupBy (\a b -> _path a == _path b)
+
+-- | Turn route definitions into \"snapable\" format, i.e.
+-- Routes are grouped per path and selection evaluates routes
+-- against the given Snap 'Request'.
+expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
+expandRoutes (Routes routes) =
+    map (\g -> (_path (L.head g), select g)) (normalise $ execState routes [])
 
 data Handler m = Handler
   { _delta   :: !Delta

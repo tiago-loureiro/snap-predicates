@@ -76,7 +76,7 @@ handlerE (_   :*: Nothing)  = return ()
 
 testEndpointA :: Snap () -> Assertion
 testEndpointA m = do
-    let rq0 = T.get "/a" M.empty
+    let rq0 = T.get "/a" M.empty >> T.addHeader "Accept" "foo/bar"
     st0 <- rspStatus <$> T.runHandler rq0 m
     assertEqual "Accept fails" 406 st0
 
