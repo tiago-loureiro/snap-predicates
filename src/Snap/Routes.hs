@@ -40,6 +40,7 @@ import Snap.Predicates
 import qualified Data.List as L
 import qualified Data.Predicate.Env as E
 import qualified Data.ByteString as S
+import qualified Data.ByteString.Char8 as C
 
 data Pack m where
     Pack :: (Show p, Predicate p Request, FVal p ~ Error)
@@ -155,11 +156,16 @@ select :: MonadSnap m => [Route m] -> m ()
 select g = do
     ms <- filterM byMethod g
     if null ms
-        then respond (Error 405 Nothing)
+        then do
+            respond (Error 405 Nothing)
+            modifyResponse (setHeader "Allow" validMethods)
         else evalAll ms
   where
     byMethod :: MonadSnap m => Route m -> m Bool
     byMethod x = (_method x ==) <$> getsRequest rqMethod
+
+    validMethods :: ByteString
+    validMethods = S.intercalate "," $ nub (C.pack . show . _method <$> g)
 
     evalAll :: MonadSnap m => [Route m] -> m ()
     evalAll rs = do
