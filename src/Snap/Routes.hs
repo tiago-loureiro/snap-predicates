@@ -54,6 +54,10 @@ data Route m = Route
   , _pred    :: !(Pack m)
   }
 
+-- | The Routes monad is used to add routing declarations via 'addRoute' or
+-- one of 'get', 'post', etc.
+-- Routing declarations can then be turned into the ordinary snap format,
+-- i.e. @MonadSnap m => [(ByteString, m a)]@ or into strings.
 newtype Routes m a = Routes
   { _unroutes :: State [Route m] a }
 
@@ -61,6 +65,8 @@ instance Monad (Routes m) where
     return  = Routes . return
     m >>= f = Routes $ _unroutes m >>= _unroutes . f
 
+-- | Add a route for some 'Method' and path (potentially with variable
+-- captures), and constrained the some 'Predicate'.
 addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          => Method
          -> ByteString        -- ^ path
@@ -69,6 +75,7 @@ addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          -> Routes m ()
 addRoute m r x p = Routes $ modify ((Route m r (Pack p x)):)
 
+-- | Specialisation of 'addRoute' for a specific HTTP 'Method'.
 get, head, post, put, delete, trace, options, connect ::
     (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
     => ByteString        -- ^ path
@@ -84,6 +91,8 @@ trace   = addRoute TRACE
 options = addRoute OPTIONS
 connect = addRoute CONNECT
 
+-- | Specialisation of 'addRoute' for a specific HTTP 'Method' taking
+-- no 'Predicate' into consideration.
 get_, head_, post_, put_, delete_, trace_, options_, connect_ ::
     (MonadSnap m)
     => ByteString    -- ^ path

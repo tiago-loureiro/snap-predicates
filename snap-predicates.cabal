@@ -1,6 +1,6 @@
 name:                snap-predicates
 version:             0.2.0
-synopsis:            Predicates for route definitions.
+synopsis:            Declarative routing for Snap.
 license:             MIT
 license-file:        LICENSE
 author:              Toralf Wittner, Brendan Hay
@@ -13,7 +13,7 @@ cabal-version:       >= 1.10
 extra-source-files:  README.lhs
 
 description:
-    Provides a definition of a predicate type-class together
+    Provides the definition of a predicate type-class together
     with several concrete implementations which are used to
     constrain the set of possible Snap handlers in a type-safe
     way.
@@ -54,15 +54,6 @@ library
       , snap-core        >= 0.9
       , attoparsec       >= 0.10
 
-    other-extensions:
-       BangPatterns
-     , FlexibleInstances
-     , GADTs
-     , MultiParamTypeClasses
-     , OverloadedStrings
-     , TypeFamilies
-     , TypeOperators
-
 test-suite snap-predicates-test-suite
     type:             exitcode-stdio-1.0
     default-language: Haskell2010
@@ -94,15 +85,6 @@ test-suite snap-predicates-test-suite
       , test-framework-hunit       >= 0.2
       , test-framework-quickcheck2 >= 0.2
 
-    other-extensions:
-       BangPatterns
-     , FlexibleInstances
-     , GADTs
-     , MultiParamTypeClasses
-     , OverloadedStrings
-     , TypeFamilies
-     , TypeOperators
-
 source-repository head
     type:             git
-    location:         https://github.com/twittner/snap-predicates
+    location:         git://github.com/twittner/snap-predicates.git
