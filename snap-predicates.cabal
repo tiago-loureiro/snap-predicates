@@ -10,7 +10,7 @@ stability:           experimental
 category:            Snap
 build-type:          Simple
 cabal-version:       >= 1.10
-extra-source-files:  README.lhs
+extra-source-files:  README.md
 
 description:
     Provides the definition of a predicate type-class together
