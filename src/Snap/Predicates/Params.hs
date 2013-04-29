@@ -10,12 +10,12 @@ module Snap.Predicates.Params
 where
 
 import Data.ByteString (ByteString)
+import Data.ByteString.Readable
 import Data.Either
 import Data.Monoid
 import Data.String
 import Data.Typeable
 import Data.Predicate
-import Data.Predicate.Readable
 import Snap.Core hiding (headers)
 import Snap.Predicates.Error
 import Snap.Predicates.Internal

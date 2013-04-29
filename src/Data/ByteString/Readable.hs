@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections     #-}
-module Data.Predicate.Readable (Readable (..)) where
+module Data.ByteString.Readable (Readable (..)) where
 
 import Control.Applicative
 import Data.ByteString (ByteString)

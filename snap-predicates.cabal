@@ -25,9 +25,9 @@ library
     ghc-prof-options: -prof -auto-all
 
     exposed-modules:
-        Data.Predicate
+        Data.ByteString.Readable
+      , Data.Predicate
       , Data.Predicate.Env
-      , Data.Predicate.Readable
       , Snap.Predicates
       , Snap.Predicates.Accept
       , Snap.Predicates.Error
