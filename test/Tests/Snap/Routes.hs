@@ -7,11 +7,8 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
-import Data.Either
 import Data.Predicate
 import Data.String
-import Data.Text (Text, strip)
-import Data.Text.Encoding
 import Snap.Core
 import Snap.Predicates hiding (Text)
 import Snap.Routes
@@ -27,52 +24,49 @@ tests =
 
 testSitemap :: Test
 testSitemap = testCase "Sitemap" $ do
-    let routes = expandRoutes sitemap
-    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e"] (map fst routes)
-    mapM_ (\(r, h) -> h r) (zip (map snd routes) [testEndpointA])
+    let routes  = expandRoutes sitemap
+    let handler = route routes
+    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/z"] (map fst routes)
+    testEndpointA handler
+    testEndpointB handler
+    testEndpointC handler
+    testEndpointD handler
 
 sitemap :: Routes Snap ()
 sitemap = do
-    get "/a" handlerA $
-        Accept Application Json :&: (Param "name" :|: Param "nick") :&: Param "foo"
+    get "/a" handlerA
+        (Accept Application Json :&: (Param "name" :|: Param "nick") :&: Param "foo")
 
-    get "/b" handlerB $
-        Accept Application Json :&: (Param "name" :||: Param "nick") :&: Param "foo"
+    get "/b" handlerB
+        (Param "baz")
 
-    get "/c" handlerC $ Fail (err 410 "Gone.")
+    get "/c" handlerC
+        (ParamOpt "foo")
 
-    post "/d" handlerD $ Accept Application Json :&: Parameter "foo" decode Nothing
+    get "/d" handlerD
+        (ParamDef "foo" 0)
 
-    get "/e" handlerE $ (Param "foo" :|: Const 0) :&: ParamOpt "bar"
-  where
-    decode bs =
-        let txt = rights (map decodeUtf8' bs)
-        in if null txt
-               then Left "UTF-8 decoding error"
-               else Right (map strip txt)
+    get "/z" handlerZ
+        (Fail (err 410 "Gone."))
 
 handlerA :: MediaType Application Json :*: Int :*: ByteString -> Snap ()
 handlerA (_ :*: i :*: _) = writeText (fromString . show $ i)
 
-handlerB :: MediaType Application Json :*: (ByteString :+: ByteString) :*: ByteString -> Snap ()
-handlerB (_ :*: name :*: _) =
-    case name of
-        Left  _ -> return ()
-        Right _ -> return ()
+handlerB :: Int -> Snap ()
+handlerB baz = writeText (Text.pack . show $ baz)
 
-handlerC :: MediaType Application Json -> Snap ()
-handlerC _ = do
+handlerC :: Maybe Int -> Snap ()
+handlerC foo = writeText (Text.pack . show $ foo)
+
+handlerD :: Int -> Snap ()
+handlerD foo = writeText (Text.pack . show $ foo)
+
+handlerZ :: MediaType Application Json -> Snap ()
+handlerZ _ = do
     rq <- getRequest
     with (Param "bar" :&: Param "baz") rq $ \(bar :*: baz) -> do
         writeBS bar
         writeBS baz
-
-handlerD :: MediaType Application Json :*: [Text] -> Snap ()
-handlerD (_ :*: txt) = writeText $ Text.intercalate ", " txt
-
-handlerE :: Int :*: Maybe ByteString -> Snap ()
-handlerE (foo :*: Just bar) = writeText (Text.pack . show $ foo) >> writeBS bar
-handlerE (_   :*: Nothing)  = return ()
 
 testEndpointA :: Snap () -> Assertion
 testEndpointA m = do
@@ -92,6 +86,57 @@ testEndpointA m = do
     let rq3 = T.get "/a" (M.fromList [("name", ["123"]), ("foo", ["y"])]) >>
               T.addHeader "Accept" "application/json"
     T.runHandler rq3 m >>= T.assertSuccess
+
+testEndpointB :: Snap () -> Assertion
+testEndpointB m = do
+    rs0 <- T.runHandler (T.get "/b" M.empty) m
+    bd0 <- T.getResponseBody rs0
+    assertEqual "b. baz 1" 400 (rspStatus rs0)
+    assertEqual "b. baz 2" "Missing parameter 'baz'." bd0
+
+    rs1 <- T.runHandler (T.get "/b" $ M.fromList [("baz", ["abc"])]) m
+    bd1 <- T.getResponseBody rs1
+    assertEqual "b. baz 3" 400 (rspStatus rs1)
+    assertEqual "b. baz 4" "input does not start with a digit" bd1
+
+    rs2 <- T.runHandler (T.get "/b" $ M.fromList [("baz", ["abc", "123"])]) m
+    bd2 <- T.getResponseBody rs2
+    assertEqual "b. baz 5" 200 (rspStatus rs2)
+    assertEqual "b. baz 6" "123" bd2
+
+testEndpointC :: Snap () -> Assertion
+testEndpointC m = do
+    rs0 <- T.runHandler (T.get "/c" M.empty) m
+    bd0 <- T.getResponseBody rs0
+    assertEqual "c. foo 1" 200 (rspStatus rs0)
+    assertEqual "c. foo 2" "Nothing" bd0
+
+    rs1 <- T.runHandler (T.get "/c" $ M.fromList [("foo", ["abc", "123"])]) m
+    bd1 <- T.getResponseBody rs1
+    assertEqual "c. foo 3" 200 (rspStatus rs1)
+    assertEqual "c. foo 4" "Just 123" bd1
+
+    rs2 <- T.runHandler (T.get "/c" $ M.fromList [("foo", ["abc"])]) m
+    bd2 <- T.getResponseBody rs2
+    assertEqual "c. foo 5" 400 (rspStatus rs2)
+    assertEqual "c. foo 6" "input does not start with a digit" bd2
+
+testEndpointD :: Snap () -> Assertion
+testEndpointD m = do
+    rs0 <- T.runHandler (T.get "/d" M.empty) m
+    bd0 <- T.getResponseBody rs0
+    assertEqual "d. foo 1" 200 (rspStatus rs0)
+    assertEqual "d. foo 2" "0" bd0
+
+    rs1 <- T.runHandler (T.get "/d" $ M.fromList [("foo", ["xxx", "42"])]) m
+    bd1 <- T.getResponseBody rs1
+    assertEqual "d. foo 3" 200 (rspStatus rs1)
+    assertEqual "d. foo 4" "42" bd1
+
+    rs2 <- T.runHandler (T.get "/d" $ M.fromList [("foo", ["yyy"])]) m
+    bd2 <- T.getResponseBody rs2
+    assertEqual "d. foo 5" 400 (rspStatus rs2)
+    assertEqual "d. foo 6" "input does not start with a digit" bd2
 
 -- Media Selection Tests:
 

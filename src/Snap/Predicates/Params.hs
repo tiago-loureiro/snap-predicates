@@ -11,7 +11,6 @@ where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
-import Data.Either
 import Data.Monoid
 import Data.String
 import Data.Typeable
@@ -20,12 +19,11 @@ import Snap.Core hiding (headers)
 import Snap.Predicates.Error
 import Snap.Predicates.Internal
 import qualified Data.Predicate.Env as E
-import qualified Data.ByteString as S
 
 -- | The most generic request parameter predicate provided.
 -- It will get all request parameter values of '_name' and pass them on to
 -- the conversion function '_read', which might either yield an error
--- message or a value. In case of error, an optional default may be
+-- message or a value. If the parameter is not present, an optional default may be
 -- returned instead, if nothing is provided, the error message will be used
 -- when construction the 400 status.
 data Parameter a = Parameter
@@ -35,10 +33,9 @@ data Parameter a = Parameter
   }
 
 instance Typeable a => Predicate (Parameter a) Request where
-    type FVal (Parameter a) = Error
-    type TVal (Parameter a) = a
-    apply (Parameter nme f def) r =
-        E.lookup (key nme) >>= maybe work result
+    type FVal (Parameter a)       = Error
+    type TVal (Parameter a)       = a
+    apply (Parameter nme f def) r = E.lookup (key nme) >>= maybe work result
       where
         work = case params r nme of
             [] -> maybe (return (F (err 400 ("Missing parameter '" <> nme <> "'."))))
@@ -48,11 +45,11 @@ instance Typeable a => Predicate (Parameter a) Request where
                 let x = f vs
                 E.insert (key nme) x
                 case x of
-                    Left msg -> return $ maybe (F (err 400 msg)) (T 0) def
+                    Left msg -> return $ F (err 400 msg)
                     Right  v -> return $ T 0 v
 
-        result (Left msg) = return (F (err 400 msg))
-        result (Right  v) = return (T 0 v)
+        result (Left msg) = return $ F (err 400 msg)
+        result (Right  v) = return $ T 0 v
 
         key name = "parameter:" <> name <> ":" <> (fromString . show . typeOf $ def)
 
@@ -60,48 +57,46 @@ instance Show (Parameter a) where
     show p = "Parameter: " ++ show (_name p)
 
 -- | Specialisation of 'Parameter' which returns the first request
--- which could be converted to the target type.
+-- parameter which could be converted to the target type.
+-- Relies on 'Readable' type-class for the actual conversion.
 data Param a = Param ByteString
 
 instance (Typeable a, Readable a) => Predicate (Param a) Request where
     type FVal (Param a) = Error
     type TVal (Param a) = a
-    apply (Param x)     = apply (Parameter x f Nothing)
-      where
-        f vs = let (es, xs) = partitionEithers $ map fromByteString vs
-               in if null xs
-                      then Left (S.intercalate "\n" es)
-                      else Right (head xs)
+    apply (Param x)     = apply (Parameter x readValues Nothing)
 
 instance Show (Param a) where
     show (Param x) = "Param: " ++ show x
 
--- | Like 'Param', but denoting an optional parameter, i.e. if the
--- parameter is not present or can not be converted to the target type, the
--- predicate will still succeed.
-data ParamOpt a = ParamOpt ByteString
-
-instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
-    type FVal (ParamOpt a) = Error
-    type TVal (ParamOpt a) = Maybe a
-    apply (ParamOpt x)     = apply (Parameter x f (Just Nothing))
-      where
-        f vs = let xs = rights $ map fromByteString vs
-               in if null xs then Right Nothing else Right (head xs)
-
-instance Show (ParamOpt a) where
-    show (ParamOpt x) = "ParamOpt: " ++ show x
-
--- | Like 'Param', but in case the parameter could not be found, the
--- provided default value will be used. ParamDef is provided for
--- convenience and nothing else than Param || Const, e.g.
--- @ParamDef \"foo\" 0 == Param \"foo\" ':|:' 'Const' 0@.
+-- | Specialisation of 'Parameter' which returns the first request
+-- parameter which could be converted to the target type.
+-- If the parameter is not present, the provided default will be used.
+-- Relies on 'Readable' type-class for the actual conversion.
 data ParamDef a = ParamDef ByteString a
 
 instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
     type FVal (ParamDef a) = Error
     type TVal (ParamDef a) = a
-    apply (ParamDef x d)   = apply (Param x :|: Const d)
+    apply (ParamDef x d)   = apply (Parameter x readValues (Just d))
 
 instance Show a => Show (ParamDef a) where
     show (ParamDef x d) = "ParamDef: " ++ show x ++ " [" ++ show d ++ "]"
+
+-- | Predicate which returns the first request parameter which could be
+-- converted to the target type wrapped in a Maybe.
+-- If the parameter is not present, the 'Nothing' will be returned.
+-- Relies on 'Readable' type-class for the actual conversion.
+data ParamOpt a = ParamOpt ByteString
+
+instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
+    type FVal (ParamOpt a) = Error
+    type TVal (ParamOpt a) = Maybe a
+    apply (ParamOpt x) r   = case params r x of
+        [] -> return (T 0 Nothing)
+        vs -> case readValues vs of
+                Left msg -> return $ F (err 400 msg)
+                Right  v -> return $ T 0 (Just v)
+
+instance Show (ParamOpt a) where
+    show (ParamOpt x) = "ParamOpt: " ++ show x

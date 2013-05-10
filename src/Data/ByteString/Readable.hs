@@ -49,12 +49,6 @@ parseList (!acc, !s)
   where
     noise w = w `elem` [0x20, 0x2C] -- [' ', ',']
 
-instance Readable a => Readable (Maybe a) where
-    readByteString s =
-        case readByteString s of
-            Left       _  -> Right (Nothing, "")
-            Right (v, s') -> Right (Just v, s')
-
 instance Readable a => Readable [a] where
     readByteString = readByteStringList
 
