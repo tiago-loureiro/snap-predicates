@@ -1,26 +1,40 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 module Snap.Predicates.Internal
-  ( headers
+  ( RqPred (..)
+  , headers
   , params
   , safeHead
   , readValues
+  , rqApply
+  , rqApplyMaybe
+  , key
   )
 where
 
-import Snap.Core hiding (headers)
+import Control.Monad.State.Class
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
 import Data.CaseInsensitive (mk)
 import Data.Either
+import Data.Maybe
+import Data.Monoid
+import Data.Predicate
+import Data.Predicate.Env (Env)
+import Data.String
+import Data.Typeable
+import Snap.Core hiding (headers)
+import Snap.Predicates.Error
 
-import qualified Data.ByteString as S
-import qualified Data.Map.Strict as M
+import qualified Data.Predicate.Env as E
+import qualified Data.ByteString    as S
+import qualified Data.Map.Strict    as M
 
-headers :: Request -> ByteString -> [ByteString]
-headers rq name = maybe [] id . getHeaders (mk name) $ rq
+headers :: ByteString -> Request -> [ByteString]
+headers name rq = maybe [] id . getHeaders (mk name) $ rq
 
-params :: Request -> ByteString -> [ByteString]
-params rq name = maybe [] id . M.lookup name . rqParams $ rq
+params :: ByteString -> Request -> [ByteString]
+params name rq = maybe [] id . M.lookup name . rqParams $ rq
 
 safeHead :: [a] -> Maybe a
 safeHead []    = Nothing
@@ -32,3 +46,47 @@ readValues vs =
     in if null xs
            then Left (S.intercalate "\n" es)
            else Right (head xs)
+
+data RqPred a = RqPred
+  { _rqName      :: !ByteString
+  , _rqRead      :: [ByteString] -> Either ByteString a
+  , _rqDef       :: !(Maybe a)
+  , _rqCachePref :: !ByteString
+  , _rqVals      :: Request -> [ByteString]
+  , _rqError     :: !(Maybe Error)
+  }
+
+rqApply :: (Typeable a, MonadState m, StateType m ~ Env)
+        => RqPred a -> Request -> m (Boolean Error a)
+rqApply p r =
+    let k = key (_rqCachePref p) (_rqName p) (_rqDef p)
+    in E.lookup k >>= maybe (work k) result
+  where
+    work k = case (_rqVals p) r of
+        [] -> return $ maybe (F (fromMaybe defErr (_rqError p))) (T 0) (_rqDef p)
+        vs -> do
+            let v = (_rqRead p) vs
+            E.insert k v
+            result v
+
+    result = return . either (F . err 400) (T 0)
+    defErr = Error 400 Nothing
+
+rqApplyMaybe :: (Typeable a, MonadState m, StateType m ~ Env)
+             => RqPred a -> Request -> m (Boolean Error (Maybe a))
+rqApplyMaybe p r =
+    let n = Nothing :: Typeable a => Maybe a
+        k = key (_rqCachePref p) (_rqName p) n
+    in E.lookup k >>= maybe (work k n) result
+  where
+    work k n = case (_rqVals p) r of
+        [] -> return (T 0 n)
+        vs -> do
+            let v = (_rqRead p) vs
+            E.insert k v
+            result v
+
+    result = return . either (F . err 400) (T 0 . Just)
+
+key :: (Typeable a, IsString m, Monoid m) => m -> m -> a -> m
+key prefix name def = prefix <> name <> ":" <> (fromString . show . typeOf $ def)

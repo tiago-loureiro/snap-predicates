@@ -3,22 +3,20 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Snap.Predicates.Params
   ( Parameter (..)
-  , Param (..)
-  , ParamOpt (..)
-  , ParamDef (..)
+  , Param     (..)
+  , ParamOpt  (..)
+  , ParamDef  (..)
   )
 where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
 import Data.Monoid
-import Data.String
 import Data.Typeable
 import Data.Predicate
 import Snap.Core hiding (headers)
 import Snap.Predicates.Error
 import Snap.Predicates.Internal
-import qualified Data.Predicate.Env as E
 
 -- | The most generic request parameter predicate provided.
 -- It will get all request parameter values of '_name' and pass them on to
@@ -27,31 +25,26 @@ import qualified Data.Predicate.Env as E
 -- returned instead, if nothing is provided, the error message will be used
 -- when construction the 400 status.
 data Parameter a = Parameter
-  { _name    :: !ByteString                         -- ^ request parameter name
-  , _read    :: [ByteString] -> Either ByteString a -- ^ conversion function
-  , _default :: !(Maybe a)                          -- ^ (optional) default value
+  { _pName    :: !ByteString                         -- ^ request parameter name
+  , _pRead    :: [ByteString] -> Either ByteString a -- ^ conversion function
+  , _pDefault :: !(Maybe a)                          -- ^ (optional) default value
   }
 
 instance Typeable a => Predicate (Parameter a) Request where
-    type FVal (Parameter a)       = Error
-    type TVal (Parameter a)       = a
-    apply (Parameter nme f def) r =
-        let k = key "parameter:" nme def
-        in E.lookup k >>= maybe (work k) result
-      where
-        work k = case params r nme of
-            [] -> maybe (return (F (err 400 ("Missing parameter '" <> nme <> "'."))))
-                        (return . (T 0))
-                        def
-            vs -> do
-                let v = f vs
-                E.insert k v
-                result v
-
-        result = return . either (F . err 400) (T 0)
+    type FVal (Parameter a)     = Error
+    type TVal (Parameter a)     = a
+    apply (Parameter nme f def) =
+        rqApply RqPred
+          { _rqName      = nme
+          , _rqRead      = f
+          , _rqDef       = def
+          , _rqCachePref = "parameter:"
+          , _rqVals      = params nme
+          , _rqError     = Just $ err 400 ("Missing parameter '" <> nme <> "'.")
+          }
 
 instance Show (Parameter a) where
-    show p = "Parameter: " ++ show (_name p)
+    show p = "Parameter: " ++ show (_pName p)
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -82,29 +75,22 @@ instance Show a => Show (ParamDef a) where
 
 -- | Predicate which returns the first request parameter which could be
 -- converted to the target type wrapped in a Maybe.
--- If the parameter is not present, the 'Nothing' will be returned.
+-- If the parameter is not present, 'Nothing' will be returned.
 -- Relies on 'Readable' type-class for the actual conversion.
 data ParamOpt a = ParamOpt ByteString
 
 instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
     type FVal (ParamOpt a) = Error
     type TVal (ParamOpt a) = Maybe a
-    apply (ParamOpt x) r   =
-        let n = Nothing :: (Typeable a, Readable a) => Maybe a
-            k = key "paramopt:" x n
-        in E.lookup k >>= maybe (work k n) result
-      where
-        work k n = case params r x of
-            []     -> return (T 0 n)
-            values -> do
-                let v = readValues values
-                E.insert k v
-                result v
-
-        result = return . either (F . err 400) (T 0 . Just)
-
-key :: (Typeable a, IsString m, Monoid m) => m -> m -> a -> m
-key prefix name def = prefix <> name <> ":" <> (fromString . show . typeOf $ def)
+    apply (ParamOpt x)     =
+        rqApplyMaybe RqPred
+          { _rqName      = x
+          , _rqRead      = readValues
+          , _rqDef       = Nothing
+          , _rqCachePref = "paramopt:"
+          , _rqVals      = params x
+          , _rqError     = Nothing
+          }
 
 instance Show (ParamOpt a) where
     show (ParamOpt x) = "ParamOpt: " ++ show x

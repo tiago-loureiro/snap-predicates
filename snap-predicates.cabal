@@ -32,6 +32,7 @@ library
       , Snap.Predicates.Accept
       , Snap.Predicates.Error
       , Snap.Predicates.Params
+      , Snap.Predicates.Headers
       , Snap.Predicates.Content
       , Snap.Predicates.MediaTypes
       , Snap.Predicates.Tutorial

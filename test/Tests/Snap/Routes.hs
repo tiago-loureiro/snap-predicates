@@ -26,11 +26,12 @@ testSitemap :: Test
 testSitemap = testCase "Sitemap" $ do
     let routes  = expandRoutes sitemap
     let handler = route routes
-    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/z"] (map fst routes)
+    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e", "/z"] (map fst routes)
     testEndpointA handler
     testEndpointB handler
     testEndpointC handler
     testEndpointD handler
+    testEndpointE handler
 
 sitemap :: Routes Snap ()
 sitemap = do
@@ -46,6 +47,9 @@ sitemap = do
     get "/d" handlerD
         (ParamDef "foo" 0)
 
+    get "/e" handlerE
+        (HdrDef "foo" 0)
+
     get "/z" handlerZ
         (Fail (err 410 "Gone."))
 
@@ -60,6 +64,9 @@ handlerC foo = writeText (Text.pack . show $ foo)
 
 handlerD :: Int -> Snap ()
 handlerD foo = writeText (Text.pack . show $ foo)
+
+handlerE :: Int -> Snap ()
+handlerE foo = writeText (Text.pack . show $ foo)
 
 handlerZ :: MediaType Application Json -> Snap ()
 handlerZ _ = do
@@ -137,6 +144,23 @@ testEndpointD m = do
     bd2 <- T.getResponseBody rs2
     assertEqual "d. foo 5" 400 (rspStatus rs2)
     assertEqual "d. foo 6" "input does not start with a digit" bd2
+
+testEndpointE :: Snap () -> Assertion
+testEndpointE m = do
+    rs0 <- T.runHandler (T.get "/e" M.empty) m
+    bd0 <- T.getResponseBody rs0
+    assertEqual "e. foo 1" 200 (rspStatus rs0)
+    assertEqual "e. foo 2" "0" bd0
+
+    rs1 <- T.runHandler (T.get "/e" M.empty >> T.addHeader "foo" "42") m
+    bd1 <- T.getResponseBody rs1
+    assertEqual "e. foo 3" 200 (rspStatus rs1)
+    assertEqual "e. foo 4" "42" bd1
+
+    rs2 <- T.runHandler (T.get "/e" M.empty >> T.addHeader "foo" "abc") m
+    bd2 <- T.getResponseBody rs2
+    assertEqual "e. foo 5" 400 (rspStatus rs2)
+    assertEqual "e. foo 6" "input does not start with a digit" bd2
 
 -- Media Selection Tests:
 

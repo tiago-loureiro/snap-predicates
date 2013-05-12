@@ -4,6 +4,7 @@ module Snap.Predicates
   , module Snap.Predicates.Content
   , module Snap.Predicates.MediaTypes
   , module Snap.Predicates.Params
+  , module Snap.Predicates.Headers
   )
 where
 
@@ -12,3 +13,4 @@ import Snap.Predicates.Accept
 import Snap.Predicates.Content
 import Snap.Predicates.MediaTypes
 import Snap.Predicates.Params
+import Snap.Predicates.Headers
