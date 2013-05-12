@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Snap.Predicates.Headers
+module Snap.Predicate.Header
   ( Header (..)
   , Hdr    (..)
   , HdrOpt (..)
@@ -15,8 +15,8 @@ import Data.Monoid
 import Data.Typeable
 import Data.Predicate
 import Snap.Core hiding (headers)
-import Snap.Predicates.Error
-import Snap.Predicates.Internal
+import Snap.Predicate.Error
+import Snap.Predicate.Internal
 
 -- | The most generic request header predicate provided.
 -- It will get all request header values of '_name' and pass them on to

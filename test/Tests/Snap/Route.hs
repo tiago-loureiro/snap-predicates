@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeOperators #-}
-module Tests.Snap.Routes (tests) where
+module Tests.Snap.Route (tests) where
 
 import Control.Applicative hiding (Const)
 import Control.Monad.IO.Class
@@ -10,11 +10,11 @@ import Data.ByteString (ByteString)
 import Data.Predicate
 import Data.String
 import Snap.Core
-import Snap.Predicates hiding (Text)
-import Snap.Routes
-import qualified Snap.Test as T
+import Snap.Predicate hiding (Text)
+import Snap.Route
+import qualified Snap.Test       as T
 import qualified Data.Map.Strict as M
-import qualified Data.Text as Text
+import qualified Data.Text       as Text
 
 tests :: [Test]
 tests =

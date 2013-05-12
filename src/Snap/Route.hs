@@ -3,14 +3,14 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE FlexibleContexts  #-}
-module Snap.Routes
+module Snap.Route
   ( Routes
   , showRoutes
   , expandRoutes
   , addRoute
   , get
   , get_
-  , Snap.Routes.head
+  , Snap.Route.head
   , head_
   , post
   , post_
@@ -36,7 +36,7 @@ import Data.List hiding (head, delete)
 import Data.Predicate
 import Data.Predicate.Env (Env)
 import Snap.Core
-import Snap.Predicates
+import Snap.Predicate
 import qualified Data.List as L
 import qualified Data.Predicate.Env as E
 import qualified Data.ByteString as S

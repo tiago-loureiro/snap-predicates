@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
-module Snap.Predicates.Internal
+module Snap.Predicate.Internal
   ( RqPred (..)
   , headers
   , params
@@ -24,7 +24,7 @@ import Data.Predicate.Env (Env)
 import Data.String
 import Data.Typeable
 import Snap.Core hiding (headers)
-import Snap.Predicates.Error
+import Snap.Predicate.Error
 
 import qualified Data.Predicate.Env as E
 import qualified Data.ByteString    as S

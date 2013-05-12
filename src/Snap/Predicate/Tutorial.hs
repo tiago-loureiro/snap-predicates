@@ -1,4 +1,4 @@
-module Snap.Predicates.Tutorial
+module Snap.Predicate.Tutorial
   ( -- * Motivation
     -- $motivation
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
-module Snap.Predicates.Error where
+module Snap.Predicate.Error where
 
 import Data.ByteString (ByteString)
 import Data.Word

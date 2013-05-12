@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, BangPatterns, DeriveDataTypeable #-}
-module Snap.Predicates.Parsers.Accept
+module Snap.Predicate.Parser.Accept
   ( MediaType (..)
   , parseMediaTypes
   )
@@ -11,7 +11,7 @@ import Data.Attoparsec.Text (double)
 import Data.ByteString (ByteString)
 import Data.Text.Encoding
 import Data.Typeable
-import Snap.Predicates.Parsers.Shared
+import Snap.Predicate.Parser.Shared
 import qualified Data.Attoparsec.Text as T
 
 data MediaType = MediaType

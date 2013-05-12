@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Snap.Predicates.Accept
+module Snap.Predicate.Accept
   ( Accept (..)
-  , module Snap.Predicates.MediaTypes
+  , module Snap.Predicate.MediaType
   )
 where
 
@@ -11,9 +11,9 @@ import Data.Monoid hiding (All)
 import Data.String
 import Data.Predicate
 import Snap.Core hiding (headers)
-import Snap.Predicates.Error
-import Snap.Predicates.MediaTypes
-import Snap.Predicates.MediaTypes.Internal
+import Snap.Predicate.Error
+import Snap.Predicate.MediaType
+import Snap.Predicate.MediaType.Internal
 import qualified Data.Predicate.Env as E
 
 -- | A 'Predicate' against the 'Request's \"Accept\" header.

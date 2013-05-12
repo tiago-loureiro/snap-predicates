@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings, FlexibleContexts, TypeFamilies #-}
-module Tests.Snap.Predicates (tests) where
+module Tests.Snap.Predicate (tests) where
 
 import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Predicate
-import Snap.Predicates
+import Snap.Predicate
 import Snap.Test
 import qualified Data.Map.Strict as M
 

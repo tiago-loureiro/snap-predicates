@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
-module Snap.Predicates.MediaTypes.Internal where
+module Snap.Predicate.MediaType.Internal where
 
 import Control.Monad
 import Control.Monad.State.Strict
@@ -8,10 +8,10 @@ import Data.ByteString (ByteString)
 import Data.List (sortBy)
 import Data.Maybe
 import Snap.Core (Request)
-import Snap.Predicates.Internal
-import Snap.Predicates.MediaTypes
-import qualified Data.Predicate.Env as E
-import qualified Snap.Predicates.Parsers.Accept as A
+import Snap.Predicate.Internal
+import Snap.Predicate.MediaType
+import qualified Data.Predicate.Env           as E
+import qualified Snap.Predicate.Parser.Accept as A
 
 mediaType :: (MType t, MSubType s) => Bool -> t -> s -> [A.MediaType] -> Maybe (MediaType t s)
 mediaType fuzzy t s = safeHead . mapMaybe (\m -> do

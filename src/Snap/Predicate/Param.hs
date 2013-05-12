@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Snap.Predicates.Params
+module Snap.Predicate.Param
   ( Parameter (..)
   , Param     (..)
   , ParamOpt  (..)
@@ -14,9 +14,9 @@ import Data.ByteString.Readable
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
-import Snap.Core hiding (headers)
-import Snap.Predicates.Error
-import Snap.Predicates.Internal
+import Snap.Core
+import Snap.Predicate.Error
+import Snap.Predicate.Internal
 
 -- | The most generic request parameter predicate provided.
 -- It will get all request parameter values of '_name' and pass them on to

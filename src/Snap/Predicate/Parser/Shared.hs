@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, BangPatterns #-}
-module Snap.Predicates.Parsers.Shared where
+module Snap.Predicate.Parser.Shared where
 
 import Control.Applicative
 import Data.Attoparsec

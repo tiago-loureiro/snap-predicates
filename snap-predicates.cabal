@@ -28,21 +28,21 @@ library
         Data.ByteString.Readable
       , Data.Predicate
       , Data.Predicate.Env
-      , Snap.Predicates
-      , Snap.Predicates.Accept
-      , Snap.Predicates.Error
-      , Snap.Predicates.Params
-      , Snap.Predicates.Headers
-      , Snap.Predicates.Content
-      , Snap.Predicates.MediaTypes
-      , Snap.Predicates.Tutorial
-      , Snap.Routes
+      , Snap.Predicate
+      , Snap.Predicate.Accept
+      , Snap.Predicate.Error
+      , Snap.Predicate.Param
+      , Snap.Predicate.Header
+      , Snap.Predicate.Content
+      , Snap.Predicate.MediaType
+      , Snap.Predicate.Tutorial
+      , Snap.Route
 
     other-modules:
-        Snap.Predicates.Internal
-        Snap.Predicates.MediaTypes.Internal
-      , Snap.Predicates.Parsers.Accept
-      , Snap.Predicates.Parsers.Shared
+        Snap.Predicate.Internal
+        Snap.Predicate.MediaType.Internal
+      , Snap.Predicate.Parser.Accept
+      , Snap.Predicate.Parser.Shared
 
     build-depends:
         base             >= 4   && < 5
@@ -65,8 +65,8 @@ test-suite snap-predicates-test-suite
 
     other-modules:
         Tests.Data.Predicate
-      , Tests.Snap.Predicates
-      , Tests.Snap.Routes
+      , Tests.Snap.Predicate
+      , Tests.Snap.Route
 
     build-depends:
         base             >= 4   && < 5
