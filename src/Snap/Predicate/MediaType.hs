@@ -24,6 +24,7 @@ module Snap.Predicate.MediaType
   , Csv (..)
   , Encrypted (..)
   , FormData (..)
+  , FormUrlEncoded (..)
   , Gif (..)
   , Gzip (..)
   , Javascript (..)
@@ -35,6 +36,11 @@ module Snap.Predicate.MediaType
   , OctetStream (..)
   , Ogg (..)
   , Partial (..)
+  , Pkcs12 (..)
+  , Pkcs7Cert (..)
+  , Pkcs7Sig (..)
+  , Pkcs7Mime (..)
+  , Pkcs7CertRqRs (..)
   , Plain (..)
   , Png (..)
   , Postscript (..)
@@ -199,6 +205,15 @@ instance MSubType FormData where
 instance Show FormData where
     show _ = "form-data"
 
+data FormUrlEncoded = FormUrlEncoded deriving Eq
+
+instance MSubType FormUrlEncoded where
+    toSubType _ "x-www-form-urlencoded" = Just FormUrlEncoded
+    toSubType _ _                       = Nothing
+
+instance Show FormUrlEncoded where
+    show _ = "x-www-form-urlencoded"
+
 data Gif = Gif deriving Eq
 
 instance MSubType Gif where
@@ -297,6 +312,51 @@ instance MSubType Partial where
 
 instance Show Partial where
     show _ = "partial"
+
+data Pkcs12 = Pkcs12 deriving Eq
+
+instance MSubType Pkcs12 where
+    toSubType _ "x-pkcs12" = Just Pkcs12
+    toSubType _ _          = Nothing
+
+instance Show Pkcs12 where
+    show _ = "x-pkcs12"
+
+data Pkcs7Cert = Pkcs7Cert deriving Eq
+
+instance MSubType Pkcs7Cert where
+    toSubType _ "x-pkcs7-certificates" = Just Pkcs7Cert
+    toSubType _ _                      = Nothing
+
+instance Show Pkcs7Cert where
+    show _ = "x-pkcs7-certificates"
+
+data Pkcs7Sig = Pkcs7Sig deriving Eq
+
+instance MSubType Pkcs7Sig where
+    toSubType _ "x-pkcs7-signature" = Just Pkcs7Sig
+    toSubType _ _                   = Nothing
+
+instance Show Pkcs7Sig where
+    show _ = "x-pkcs7-signature"
+
+data Pkcs7Mime = Pkcs7Mime deriving Eq
+
+instance MSubType Pkcs7Mime where
+    toSubType _ "x-pkcs7-mime" = Just Pkcs7Mime
+    toSubType _ _              = Nothing
+
+instance Show Pkcs7Mime where
+    show _ = "x-pkcs7-mime"
+
+data Pkcs7CertRqRs = Pkcs7CertRqRs deriving Eq
+
+instance MSubType Pkcs7CertRqRs where
+    toSubType _ "x-pkcs7-certreqresp" = Just Pkcs7CertRqRs
+    toSubType _ _                     = Nothing
+
+instance Show Pkcs7CertRqRs where
+    show _ = "x-pkcs7-certreqresp"
 
 data Plain = Plain deriving Eq
 
@@ -428,3 +488,4 @@ instance MSubType All where
 
 instance Show All where
     show _ = "*"
+
