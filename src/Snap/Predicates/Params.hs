@@ -35,23 +35,20 @@ data Parameter a = Parameter
 instance Typeable a => Predicate (Parameter a) Request where
     type FVal (Parameter a)       = Error
     type TVal (Parameter a)       = a
-    apply (Parameter nme f def) r = E.lookup (key nme) >>= maybe work result
+    apply (Parameter nme f def) r =
+        let k = key "parameter:" nme def
+        in E.lookup k >>= maybe (work k) result
       where
-        work = case params r nme of
+        work k = case params r nme of
             [] -> maybe (return (F (err 400 ("Missing parameter '" <> nme <> "'."))))
                         (return . (T 0))
                         def
             vs -> do
-                let x = f vs
-                E.insert (key nme) x
-                case x of
-                    Left msg -> return $ F (err 400 msg)
-                    Right  v -> return $ T 0 v
+                let v = f vs
+                E.insert k v
+                result v
 
-        result (Left msg) = return $ F (err 400 msg)
-        result (Right  v) = return $ T 0 v
-
-        key name = "parameter:" <> name <> ":" <> (fromString . show . typeOf $ def)
+        result = return . either (F . err 400) (T 0)
 
 instance Show (Parameter a) where
     show p = "Parameter: " ++ show (_name p)
@@ -92,11 +89,22 @@ data ParamOpt a = ParamOpt ByteString
 instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
     type FVal (ParamOpt a) = Error
     type TVal (ParamOpt a) = Maybe a
-    apply (ParamOpt x) r   = case params r x of
-        [] -> return (T 0 Nothing)
-        vs -> case readValues vs of
-                Left msg -> return $ F (err 400 msg)
-                Right  v -> return $ T 0 (Just v)
+    apply (ParamOpt x) r   =
+        let n = Nothing :: (Typeable a, Readable a) => Maybe a
+            k = key "paramopt:" x n
+        in E.lookup k >>= maybe (work k n) result
+      where
+        work k n = case params r x of
+            []     -> return (T 0 n)
+            values -> do
+                let v = readValues values
+                E.insert k v
+                result v
+
+        result = return . either (F . err 400) (T 0 . Just)
+
+key :: (Typeable a, IsString m, Monoid m) => m -> m -> a -> m
+key prefix name def = prefix <> name <> ":" <> (fromString . show . typeOf $ def)
 
 instance Show (ParamOpt a) where
     show (ParamOpt x) = "ParamOpt: " ++ show x
