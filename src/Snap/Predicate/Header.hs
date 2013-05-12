@@ -6,11 +6,14 @@ module Snap.Predicate.Header
   , Hdr    (..)
   , HdrOpt (..)
   , HdrDef (..)
+  , HasHdr (..)
   )
 where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
+import Data.CaseInsensitive (mk)
+import Data.Maybe
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
@@ -94,3 +97,18 @@ instance (Typeable a, Readable a) => Predicate (HdrOpt a) Request where
 
 instance Show (HdrOpt a) where
     show (HdrOpt x) = "HdrOpt: " ++ show x
+
+-- | Predicate which is true if the request has a header with the
+-- given name.
+data HasHdr = HasHdr ByteString
+
+instance Predicate HasHdr Request where
+    type FVal HasHdr   = Error
+    type TVal HasHdr   = ()
+    apply (HasHdr x) r = return $
+        if isJust (getHeaders (mk x) r)
+            then T 0 ()
+            else F (err 400 ("Missing header '" <> x <> "'."))
+
+instance Show HasHdr where
+    show (HasHdr x) = "HasHdr: " ++ show x

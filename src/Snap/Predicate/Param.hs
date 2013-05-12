@@ -6,11 +6,13 @@ module Snap.Predicate.Param
   , Param     (..)
   , ParamOpt  (..)
   , ParamDef  (..)
+  , HasParam  (..)
   )
 where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
+import Data.Map (member)
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
@@ -94,3 +96,18 @@ instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
 
 instance Show (ParamOpt a) where
     show (ParamOpt x) = "ParamOpt: " ++ show x
+
+-- | Predicate which is true if the request has a parameter with the
+-- given name.
+data HasParam = HasParam ByteString
+
+instance Predicate HasParam Request where
+    type FVal HasParam   = Error
+    type TVal HasParam   = ()
+    apply (HasParam x) r = return $
+        if member x (rqParams r)
+            then T 0 ()
+            else F (err 400 ("Missing parameter '" <> x <> "'."))
+
+instance Show HasParam where
+    show (HasParam x) = "HasParam: " ++ show x
