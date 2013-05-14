@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 module Snap.Route
@@ -32,6 +31,7 @@ import Control.Monad
 import Control.Monad.State.Strict hiding (get, put)
 import Data.ByteString (ByteString)
 import Data.Either
+import Data.Function
 import Data.List hiding (head, delete)
 import Data.Predicate
 import Data.Predicate.Env (Env)
@@ -73,7 +73,7 @@ addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          -> (TVal p -> m ())  -- ^ handler
          -> p                 -- ^ 'Predicate'
          -> Routes m ()
-addRoute m r x p = Routes $ modify ((Route m r (Pack p x)):)
+addRoute m r x p = Routes $ modify (Route m r (Pack p x):)
 
 -- | Specialisation of 'addRoute' for a specific HTTP 'Method'.
 get, head, post, put, delete, trace, options, connect ::
@@ -134,10 +134,10 @@ normalise rr =
     in if null ambig then rg else error (ambiguityMessage ambig)
   where
     sorted :: [Route m] -> [Route m]
-    sorted = sortBy (\a b -> _path a `compare` _path b)
+    sorted = sortBy (compare `on` _path)
 
     grouped :: [Route m] -> [[Route m]]
-    grouped = groupBy (\a b -> _path a == _path b)
+    grouped = groupBy ((==) `on` _path)
 
     namelessPath :: Route m -> ByteString
     namelessPath =
@@ -149,7 +149,7 @@ normalise rr =
     ambiguityMessage a =
         "Paths differing only in variable names are not supported.\n"  ++
         "Problematic paths (with variable positions denoted by <>):\n" ++
-        (show a)
+        show a
 
 data Handler m = Handler
   { _delta   :: !Delta
@@ -195,7 +195,7 @@ select g = do
     closest :: MonadSnap m => [Handler m] -> m ()
     closest = foldl' (<|>) pass
             . map _handler
-            . sortBy (\a b -> _delta a `compare` _delta b)
+            . sortBy (compare `on` _delta)
 
 respond :: MonadSnap m => Error -> m ()
 respond e = do

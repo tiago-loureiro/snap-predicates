@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns      #-}
 module Snap.Predicate.MediaType
   ( -- * Types
     MType (..)

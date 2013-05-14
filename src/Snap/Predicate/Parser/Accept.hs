@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 module Snap.Predicate.Parser.Accept
   ( MediaType (..)
   , parseMediaTypes
@@ -55,8 +55,7 @@ val = takeTill (oneof ",; ")
 toDouble :: ByteString -> Maybe Double
 toDouble bs = do
     txt <- toMaybe (decodeUtf8' bs)
-    dec <- toMaybe (T.parseOnly double txt)
-    return dec
+    toMaybe (T.parseOnly double txt)
   where
     toMaybe (Right x) = Just x
     toMaybe (Left  _) = Nothing

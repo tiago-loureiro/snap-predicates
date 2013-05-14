@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Snap.Predicate.Parser.Shared where
 
 import Control.Applicative

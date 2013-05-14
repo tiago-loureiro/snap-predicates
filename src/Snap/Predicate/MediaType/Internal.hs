@@ -22,7 +22,7 @@ mediaType fuzzy t s = safeHead . mapMaybe (\m -> do
 
 readMediaTypes :: (MonadState m, StateType m ~ E.Env) => ByteString -> Request -> m [A.MediaType]
 readMediaTypes k r = do
-    let mtypes = sortBy q . concat . map A.parseMediaTypes $ headers k r
+    let mtypes = sortBy q . concatMap A.parseMediaTypes $ headers k r
     E.insert k mtypes
     return mtypes
   where

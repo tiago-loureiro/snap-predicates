@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 module Snap.Predicate.Error where
 
 import Data.ByteString (ByteString)
