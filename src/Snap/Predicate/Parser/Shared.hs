@@ -15,7 +15,7 @@ trim :: Parser a -> Parser a
 trim p = spaces *> p <* spaces
 
 oneof :: ByteString -> Word8 -> Bool
-oneof = flip elem . S.unpack
+oneof s c = S.any (== c) s
 
 chr :: Char -> Parser Word8
 chr = word8 . w
