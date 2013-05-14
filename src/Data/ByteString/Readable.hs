@@ -4,12 +4,12 @@
 module Data.ByteString.Readable (Readable (..)) where
 
 import Control.Applicative
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, snoc, elemIndex)
 import Data.Monoid
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import Data.Text.Read
-import qualified Data.Text as T
+import qualified Data.Text       as T
 import qualified Data.ByteString as S
 
 -- | The type-class 'Readable' is used to convert 'ByteString' values to
@@ -28,7 +28,7 @@ class Readable a where
     -- reading lists of values. The default implementation parses
     -- comma-separated values (also accepting interspersed spaces).
     readByteStringList :: ByteString -> Either ByteString ([a], ByteString)
-    readByteStringList s = parseList ([], s)
+    readByteStringList = parseList
 
     -- | Either turn the given 'ByteString' into a typed value or an error
     -- message. This function also checks, that all input bytes have been
@@ -38,16 +38,31 @@ class Readable a where
         (v, s') <- readByteString s
         if S.null s'
             then Right v
-            else Left ("unconsumed bytes: '" <> s' <> "'.")
+            else Left ("unconsumed bytes: '" <> s' <> "'")
 
-parseList :: Readable a => ([a], ByteString) -> Either ByteString ([a], ByteString)
-parseList (!acc, !s)
-    | S.null s  = return (reverse acc, s)
-    | otherwise = do
-        (a, s') <- readByteString s
-        parseList (a:acc, S.dropWhile noise s')
+parseList :: Readable a => ByteString -> Either ByteString ([a], ByteString)
+parseList s
+  | S.null s  = Left "empty string"
+  | otherwise = case (S.head s, S.last s) of
+      (0x5B, 0x5D) -> go ([], dropSpaces (S.init (S.tail s)))
+      (0x5B,    _) -> Left ("expected ']' after " `snoc` S.last s)
+      (_,       _) -> Left "missing brackets"
   where
-    noise w = w `elem` [0x20, 0x2C] -- [' ', ',']
+    go !(!acc, !b)
+      | S.null b         = return (reverse acc, b)
+      | S.head b == 0x5B = case elemIndex 0x5D b of
+          Nothing -> Left "unbalanced brackets"
+          Just  i -> do
+              let (e, r) = S.splitAt (i + 1) b
+              x <- fromByteString e
+              go (x:acc, S.dropWhile (oneof ", ") r)
+      | otherwise = do
+          let (e, r) = S.break (oneof ", ") b
+          x <- fromByteString e
+          go (x:acc, S.dropWhile (oneof ", ") r)
+
+    oneof b c  = S.any (== c) b
+    dropSpaces = S.dropWhile (== 0x20)
 
 instance Readable a => Readable [a] where
     readByteString = readByteStringList
