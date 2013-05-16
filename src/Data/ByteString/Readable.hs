@@ -4,13 +4,17 @@
 module Data.ByteString.Readable (Readable (..)) where
 
 import Control.Applicative
-import Data.ByteString (ByteString, snoc, elemIndex)
+import Data.Attoparsec hiding (parse)
+import Data.ByteString (ByteString, snoc)
 import Data.Monoid
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import Data.Text.Read
-import qualified Data.Text       as T
-import qualified Data.ByteString as S
+import Snap.Predicate.Parser.Shared
+
+import qualified Data.ByteString       as S
+import qualified Data.ByteString.Char8 as C
+import qualified Data.Text             as T
 
 -- | The type-class 'Readable' is used to convert 'ByteString' values to
 -- values of other types. Most instances assume the 'ByteString' is
@@ -41,28 +45,20 @@ class Readable a where
             else Left ("unconsumed bytes: '" <> s' <> "'")
 
 parseList :: Readable a => ByteString -> Either ByteString ([a], ByteString)
-parseList s
-  | S.null s  = Left "empty string"
-  | otherwise = case (S.head s, S.last s) of
-      (0x5B, 0x5D) -> go ([], dropSpaces (S.init (S.tail s)))
-      (0x5B,    _) -> Left ("expected ']' after " `snoc` S.last s)
-      (_,       _) -> Left "missing brackets"
+parseList = either (const (Left "no parse")) (return . (, "")) . parseOnly parser
   where
-    go !(!acc, !b)
-      | S.null b         = return (reverse acc, b)
-      | S.head b == 0x5B = case elemIndex 0x5D b of
-          Nothing -> Left "unbalanced brackets"
-          Just  i -> do
-              let (e, r) = S.splitAt (i + 1) b
-              x <- fromByteString e
-              go (x:acc, S.dropWhile (oneof ", ") r)
-      | otherwise = do
-          let (e, r) = S.break (oneof ", ") b
-          x <- fromByteString e
-          go (x:acc, S.dropWhile (oneof ", ") r)
+    parser  = trim (chr '[') *> go [] <* trim (chr ']')
+    go !acc = peekWord8 >>= \c -> case c of
+        Nothing   -> return (reverse acc)
+        Just 0x5D -> return (reverse acc)
+        Just 0x5B -> takeTill (== 0x5D) >>= \s -> anyWord8 >>= readVal acc . snoc s
+        _         -> takeTill (oneof " ,]") >>= readVal acc
 
-    oneof b c  = S.any (== c) b
-    dropSpaces = S.dropWhile (== 0x20)
+    readVal !acc !s = case fromByteString s of
+        Left  e -> fail (C.unpack e)
+        Right x -> optional comma >> spaces >> go (x:acc)
+
+    comma = spaces >> chr ','
 
 instance Readable a => Readable [a] where
     readByteString = readByteStringList
