@@ -1,20 +1,14 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
 module Data.ByteString.Readable (Readable (..)) where
 
 import Control.Applicative
-import Data.Attoparsec hiding (parse)
-import Data.ByteString (ByteString, snoc)
-import Data.Monoid
+import Control.Monad
+import Data.Attoparsec.ByteString.Char8
+import Data.ByteString (ByteString)
 import Data.Text (Text)
-import Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import Data.Text.Read
-import Snap.Predicate.Parser.Shared
-
-import qualified Data.ByteString       as S
-import qualified Data.ByteString.Char8 as C
-import qualified Data.Text             as T
+import Data.Text.Encoding (decodeUtf8')
+import qualified Data.Text as T
 
 -- | The type-class 'Readable' is used to convert 'ByteString' values to
 -- values of other types. Most instances assume the 'ByteString' is
@@ -22,73 +16,64 @@ import qualified Data.Text             as T
 --
 -- Minimal complete instance definition is given by 'readByteString'.
 class Readable a where
-    -- | Parse the given 'ByteString' into a typed value and also return
-    -- the unconsumed bytes. In case of error, provide an error message.
-    readByteString :: ByteString -> Either ByteString (a, ByteString)
+    readByteString :: Parser a
 
-    -- | Parse the given 'ByteString' into a list of typed values and
-    -- return the unconsumed bytes. In case of error, provide an error
-    -- message. Instances can use this function to express their way of
-    -- reading lists of values. The default implementation parses
-    -- comma-separated values (also accepting interspersed spaces).
-    readByteStringList :: ByteString -> Either ByteString ([a], ByteString)
+    -- | Instances can use this function to express their way of
+    -- reading lists of values.
+    readByteStringList :: Parser [a]
     readByteStringList = parseList
 
-    -- | Either turn the given 'ByteString' into a typed value or an error
-    -- message. This function also checks, that all input bytes have been
-    -- consumed or else it will fail.
-    fromByteString :: ByteString -> Either ByteString a
-    fromByteString s = do
-        (v, s') <- readByteString s
-        if S.null s'
-            then Right v
-            else Left ("unconsumed bytes: '" <> s' <> "'")
+    -- | Turn the given 'ByteString' into a typed value.
+    fromByteString :: ByteString -> Maybe a
+    fromByteString = either (const Nothing) Just . parseOnly readByteString
 
-parseList :: Readable a => ByteString -> Either ByteString ([a], ByteString)
-parseList = either (const (Left "no parse")) (return . (, "")) . parseOnly parser
+parseList :: Readable a => Parser [a]
+parseList = trim (char '[') *> go [] <* trim (char ']')
   where
-    parser  = trim (chr '[') *> go [] <* trim (chr ']')
-    go !acc = peekWord8 >>= \c -> case c of
-        Nothing   -> return (reverse acc)
-        Just 0x5D -> return (reverse acc)
-        Just 0x5B -> takeTill (== 0x5D) >>= \s -> anyWord8 >>= readVal acc . snoc s
-        _         -> takeTill (oneof " ,]") >>= readVal acc
+    go !acc = peekChar >>= \c -> case c of
+        Nothing  -> return (reverse acc)
+        Just ']' -> return (reverse acc)
+        _        -> continue acc
 
-    readVal !acc !s = case fromByteString s of
-        Left  e -> fail (C.unpack e)
-        Right x -> optional comma >> spaces >> go (x:acc)
-
-    comma = spaces >> chr ','
+    continue !acc = do
+        x <- readByteString
+        spaces
+        void $ optional (char ',')
+        spaces
+        go (x:acc)
 
 instance Readable a => Readable [a] where
     readByteString = readByteStringList
 
 instance Readable ByteString where
-    readByteString = Right . (, "")
+    readByteString = between '"' '"' return
 
 instance Readable Text where
-    readByteString s = (, "") <$> mapLeft (decodeUtf8' s)
+    readByteString = between '"' '"' text
 
 instance Readable Char where
-    readByteString s = do
-        t <- mapLeft (decodeUtf8' s)
-        return (T.head t, encodeUtf8 (T.tail t))
+    readByteString = between '\'' '\'' $ \s -> case s of
+        "" -> fail "no char"
+        _  -> T.head <$> text s
 
-    readByteStringList s = (, "") . T.unpack <$> mapLeft (decodeUtf8' s)
+    readByteStringList = between '"' '"' $ \s -> T.unpack <$> text s
 
 instance Readable Double where
-    readByteString = parse (signed double)
+    readByteString = signed double
 
 instance Readable Int where
-    readByteString = parse (signed decimal)
+    readByteString = signed decimal
 
-mapLeft :: Show e => Either e a -> Either ByteString a
-mapLeft (Left  s) = Left (encodeUtf8 . T.pack . show $ s)
-mapLeft (Right x) = Right x
+-- Helpers:
 
-parse :: (Text -> Either String (a, Text)) -> ByteString -> Either ByteString (a, ByteString)
-parse f s = do
-    t <- mapLeft (decodeUtf8' s)
-    case f t of
-        Left       e  -> Left (encodeUtf8 (T.pack e))
-        Right (v, t') -> return (v, encodeUtf8 t')
+text :: ByteString -> Parser Text
+text = either (fail . show) return . decodeUtf8'
+
+spaces :: Parser ()
+spaces = skipWhile (== ' ')
+
+trim :: Parser a -> Parser a
+trim p = spaces *> p <* spaces
+
+between :: Char -> Char -> (ByteString -> Parser a) -> Parser a
+between b e p = char b *> takeTill (== e) <* char e >>= p

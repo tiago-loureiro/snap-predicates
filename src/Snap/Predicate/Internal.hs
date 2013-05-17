@@ -17,7 +17,6 @@ import Control.Monad.State.Class
 import Data.ByteString (ByteString)
 import Data.ByteString.Readable
 import Data.CaseInsensitive (mk)
-import Data.Either
 import Data.Maybe
 import Data.Monoid
 import Data.Predicate
@@ -28,7 +27,6 @@ import Snap.Core hiding (headers)
 import Snap.Predicate.Error
 
 import qualified Data.Predicate.Env as E
-import qualified Data.ByteString    as S
 import qualified Data.Map.Strict    as M
 
 headers :: ByteString -> Request -> [ByteString]
@@ -46,10 +44,9 @@ safeHead (h:_) = Just h
 
 readValues :: Readable a => [ByteString] -> Either ByteString a
 readValues vs =
-    let (es, xs) = partitionEithers $ map fromByteString vs
-    in if null xs
-           then Left (S.intercalate "\n" es)
-           else Right (head xs)
+    case listToMaybe . catMaybes $ map fromByteString vs of
+        Nothing -> Left "no read"
+        Just x  -> Right x
 
 data RqPred a = RqPred
   { _rqName      :: !ByteString

@@ -90,7 +90,7 @@ testEndpointA m = do
     st2 <- rspStatus <$> T.runHandler rq2 m
     assertEqual "Param fails" 400 st2
 
-    let rq3 = T.get "/a" (M.fromList [("name", ["123"]), ("foo", ["y"])]) >>
+    let rq3 = T.get "/a" (M.fromList [("name", ["123"]), ("foo", ["\"y\""])]) >>
               T.addHeader "Accept" "application/json"
     T.runHandler rq3 m >>= T.assertSuccess
 
@@ -104,7 +104,7 @@ testEndpointB m = do
     rs1 <- T.runHandler (T.get "/b" $ M.fromList [("baz", ["abc"])]) m
     bd1 <- T.getResponseBody rs1
     assertEqual "b. baz 3" 400 (rspStatus rs1)
-    assertEqual "b. baz 4" "input does not start with a digit" bd1
+    assertEqual "b. baz 4" "no read" bd1
 
     rs2 <- T.runHandler (T.get "/b" $ M.fromList [("baz", ["abc", "123"])]) m
     bd2 <- T.getResponseBody rs2
@@ -126,7 +126,7 @@ testEndpointC m = do
     rs2 <- T.runHandler (T.get "/c" $ M.fromList [("foo", ["abc"])]) m
     bd2 <- T.getResponseBody rs2
     assertEqual "c. foo 5" 400 (rspStatus rs2)
-    assertEqual "c. foo 6" "input does not start with a digit" bd2
+    assertEqual "c. foo 6" "no read" bd2
 
 testEndpointD :: Snap () -> Assertion
 testEndpointD m = do
@@ -143,7 +143,7 @@ testEndpointD m = do
     rs2 <- T.runHandler (T.get "/d" $ M.fromList [("foo", ["yyy"])]) m
     bd2 <- T.getResponseBody rs2
     assertEqual "d. foo 5" 400 (rspStatus rs2)
-    assertEqual "d. foo 6" "input does not start with a digit" bd2
+    assertEqual "d. foo 6" "no read" bd2
 
 testEndpointE :: Snap () -> Assertion
 testEndpointE m = do
@@ -160,7 +160,7 @@ testEndpointE m = do
     rs2 <- T.runHandler (T.get "/e" M.empty >> T.addHeader "foo" "abc") m
     bd2 <- T.getResponseBody rs2
     assertEqual "e. foo 5" 400 (rspStatus rs2)
-    assertEqual "e. foo 6" "input does not start with a digit" bd2
+    assertEqual "e. foo 6" "no read" bd2
 
 -- Media Selection Tests:
 
