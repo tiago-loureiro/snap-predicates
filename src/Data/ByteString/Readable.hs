@@ -33,14 +33,12 @@ parseList = trim (char '[') *> go [] <* trim (char ']')
     go !acc = peekChar >>= \c -> case c of
         Nothing  -> return (reverse acc)
         Just ']' -> return (reverse acc)
-        _        -> continue acc
-
-    continue !acc = do
-        x <- readByteString
-        spaces
-        void $ optional (char ',')
-        spaces
-        go (x:acc)
+        _        -> do
+            a <- readByteString
+            spaces
+            void $ optional (char ',')
+            spaces
+            go (a:acc)
 
 instance Readable a => Readable [a] where
     readByteString = readByteStringList
