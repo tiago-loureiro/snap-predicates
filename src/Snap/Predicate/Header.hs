@@ -11,13 +11,13 @@ module Snap.Predicate.Header
 where
 
 import Data.ByteString (ByteString)
-import Data.ByteString.Readable
 import Data.CaseInsensitive (mk)
 import Data.Maybe
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
 import Snap.Core hiding (headers)
+import Snap.Predicate.Convert
 import Snap.Predicate.Error
 import Snap.Predicate.Internal
 
@@ -54,7 +54,7 @@ instance Show (Header a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data Hdr a = Hdr ByteString
 
-instance (Typeable a, Readable a) => Predicate (Hdr a) Request where
+instance (Typeable a, Convert a) => Predicate (Hdr a) Request where
     type FVal (Hdr a) = Error
     type TVal (Hdr a) = a
     apply (Hdr x)     = apply (Header x readValues Nothing)
@@ -68,7 +68,7 @@ instance Show (Hdr a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data HdrDef a = HdrDef ByteString a
 
-instance (Typeable a, Readable a) => Predicate (HdrDef a) Request where
+instance (Typeable a, Convert a) => Predicate (HdrDef a) Request where
     type FVal (HdrDef a) = Error
     type TVal (HdrDef a) = a
     apply (HdrDef x d)   = apply (Header x readValues (Just d))
@@ -82,7 +82,7 @@ instance Show a => Show (HdrDef a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data HdrOpt a = HdrOpt ByteString
 
-instance (Typeable a, Readable a) => Predicate (HdrOpt a) Request where
+instance (Typeable a, Convert a) => Predicate (HdrOpt a) Request where
     type FVal (HdrOpt a) = Error
     type TVal (HdrOpt a) = Maybe a
     apply (HdrOpt x)     =

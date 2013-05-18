@@ -57,7 +57,7 @@ testAcceptThrift = testCase "AcceptThrift Predicate" $ do
 
 testParam :: Test
 testParam = testCase "Param Predicate" $ do
-    rq0 <- buildRequest $ get "/" (M.fromList [("x", ["\"y\"", "\"z\""])])
+    rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
     assertEqual "Matching Param" (T 0 "y") (eval (Param "x" :: Param ByteString) rq0)
 
     rq1 <- buildRequest $ get "/" M.empty
@@ -67,7 +67,7 @@ testParam = testCase "Param Predicate" $ do
 
 testParamOpt :: Test
 testParamOpt = testCase "ParamOpt Predicate" $ do
-    rq0 <- buildRequest $ get "/" (M.fromList [("x", ["\"y\"", "\"z\""])])
+    rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
     assertEqual "Matching Param 1" (T 0 (Just "y")) (eval (ParamOpt "x" :: ParamOpt ByteString) rq0)
 
     rq1 <- buildRequest $ get "/" M.empty

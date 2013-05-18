@@ -25,8 +25,7 @@ library
     ghc-prof-options: -prof -auto-all
 
     exposed-modules:
-        Data.ByteString.Readable
-      , Data.Predicate
+        Data.Predicate
       , Data.Predicate.Env
       , Snap.Predicate
       , Snap.Predicate.Accept
@@ -34,6 +33,7 @@ library
       , Snap.Predicate.Param
       , Snap.Predicate.Header
       , Snap.Predicate.Content
+      , Snap.Predicate.Convert
       , Snap.Predicate.MediaType
       , Snap.Predicate.Tutorial
       , Snap.Route

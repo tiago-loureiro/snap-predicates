@@ -15,7 +15,6 @@ where
 
 import Control.Monad.State.Class
 import Data.ByteString (ByteString)
-import Data.ByteString.Readable
 import Data.CaseInsensitive (mk)
 import Data.Maybe
 import Data.Monoid
@@ -25,6 +24,7 @@ import Data.String
 import Data.Typeable
 import Snap.Core hiding (headers)
 import Snap.Predicate.Error
+import Snap.Predicate.Convert
 
 import qualified Data.Predicate.Env as E
 import qualified Data.Map.Strict    as M
@@ -42,7 +42,7 @@ safeHead :: [a] -> Maybe a
 safeHead []    = Nothing
 safeHead (h:_) = Just h
 
-readValues :: Readable a => [ByteString] -> Either ByteString a
+readValues :: Convert a => [ByteString] -> Either ByteString a
 readValues vs =
     case listToMaybe . catMaybes $ map fromByteString vs of
         Nothing -> Left "no read"

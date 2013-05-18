@@ -11,12 +11,12 @@ module Snap.Predicate.Param
 where
 
 import Data.ByteString (ByteString)
-import Data.ByteString.Readable
 import Data.Map (member)
 import Data.Monoid
 import Data.Typeable
 import Data.Predicate
 import Snap.Core
+import Snap.Predicate.Convert
 import Snap.Predicate.Error
 import Snap.Predicate.Internal
 
@@ -53,7 +53,7 @@ instance Show (Parameter a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data Param a = Param ByteString
 
-instance (Typeable a, Readable a) => Predicate (Param a) Request where
+instance (Typeable a, Convert a) => Predicate (Param a) Request where
     type FVal (Param a) = Error
     type TVal (Param a) = a
     apply (Param x)     = apply (Parameter x readValues Nothing)
@@ -67,7 +67,7 @@ instance Show (Param a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data ParamDef a = ParamDef ByteString a
 
-instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
+instance (Typeable a, Convert a) => Predicate (ParamDef a) Request where
     type FVal (ParamDef a) = Error
     type TVal (ParamDef a) = a
     apply (ParamDef x d)   = apply (Parameter x readValues (Just d))
@@ -81,7 +81,7 @@ instance Show a => Show (ParamDef a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data ParamOpt a = ParamOpt ByteString
 
-instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
+instance (Typeable a, Convert a) => Predicate (ParamOpt a) Request where
     type FVal (ParamOpt a) = Error
     type TVal (ParamOpt a) = Maybe a
     apply (ParamOpt x)     =
