@@ -1,5 +1,5 @@
 name:                snap-predicates
-version:             0.2.0
+version:             0.3.0
 synopsis:            Declarative routing for Snap.
 license:             MIT
 license-file:        LICENSE
@@ -33,9 +33,9 @@ library
       , Snap.Predicate.Param
       , Snap.Predicate.Header
       , Snap.Predicate.Content
-      , Snap.Predicate.Convert
       , Snap.Predicate.MediaType
       , Snap.Predicate.Tutorial
+      , Snap.Predicate.Types
       , Snap.Route
 
     other-modules:

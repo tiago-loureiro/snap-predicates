@@ -11,6 +11,7 @@ import Data.Predicate
 import Data.String
 import Snap.Core
 import Snap.Predicate hiding (Text)
+import Snap.Predicate.Types
 import Snap.Route
 import qualified Snap.Test       as T
 import qualified Data.Map.Strict as M
@@ -26,12 +27,13 @@ testSitemap :: Test
 testSitemap = testCase "Sitemap" $ do
     let routes  = expandRoutes sitemap
     let handler = route routes
-    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e", "/z"] (map fst routes)
+    assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e", "/f", "/z"] (map fst routes)
     testEndpointA handler
     testEndpointB handler
     testEndpointC handler
     testEndpointD handler
     testEndpointE handler
+    testEndpointF handler
 
 sitemap :: Routes Snap ()
 sitemap = do
@@ -50,6 +52,9 @@ sitemap = do
     get "/e" handlerE
         (HdrDef "foo" 0)
 
+    get "/f" handlerF
+        (Param "foo")
+
     get "/z" handlerZ
         (Fail (err 410 "Gone."))
 
@@ -67,6 +72,9 @@ handlerD foo = writeText (Text.pack . show $ foo)
 
 handlerE :: Int -> Snap ()
 handlerE foo = writeText (Text.pack . show $ foo)
+
+handlerF :: CSV Int -> Snap ()
+handlerF foo = writeText (Text.pack . show . sum . list $ foo)
 
 handlerZ :: MediaType Application Json -> Snap ()
 handlerZ _ = do
@@ -161,6 +169,13 @@ testEndpointE m = do
     bd2 <- T.getResponseBody rs2
     assertEqual "e. foo 5" 400 (rspStatus rs2)
     assertEqual "e. foo 6" "no read" bd2
+
+testEndpointF :: Snap () -> Assertion
+testEndpointF m = do
+    rs0 <- T.runHandler (T.get "/f" $ M.fromList [("foo", ["1,2,3,4"])]) m
+    bd0 <- T.getResponseBody rs0
+    assertEqual "e. foo 1" 200 (rspStatus rs0)
+    assertEqual "e. foo 2" "10" bd0
 
 -- Media Selection Tests:
 
