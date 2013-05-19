@@ -7,6 +7,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Attoparsec.ByteString.Char8
 import Data.ByteString (ByteString)
+import Data.Maybe
 import Data.Text (Text)
 import Data.Text.Encoding (decodeUtf8')
 
@@ -28,7 +29,7 @@ class Convert a where
     -- implementation parses comma-separated values (also accepting
     -- interspersed spaces).
     convertList :: ByteString -> Maybe ([a], ByteString)
-    convertList s = parseList ([], s)
+    convertList = parseList
 
     -- | Turn the given 'ByteString' into a typed value.
     -- This function also checks, that all input bytes have been
@@ -63,14 +64,18 @@ instance Convert Double where
 instance Convert Int where
     convert = runParser (signed decimal)
 
-parseList :: Convert a => ([a], ByteString) -> Maybe ([a], ByteString)
-parseList !(!acc, !s)
-    | C.null s  = return (reverse acc, s)
-    | otherwise = do
-        (a, s') <- convert s
-        parseList (a:acc, C.dropWhile noise s')
+parseList :: Convert a => ByteString -> Maybe ([a], ByteString)
+parseList s
+    | C.null s  = Just ([], "")
+    | otherwise =
+        let cs = map (convert . trim) (C.split ',' s)
+            xs = catMaybes cs
+            rs = any (not . C.null) (map snd xs)
+        in if length cs /= length xs || rs
+               then Nothing
+               else Just (map fst xs, "")
   where
-    noise w = w `elem` [' ', ',']
+    trim = fst . C.spanEnd (== ' ') . C.dropWhile (== ' ')
 
 fromEither :: Either e a -> Maybe a
 fromEither = either (const Nothing) Just
