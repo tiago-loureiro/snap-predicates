@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators     #-}
@@ -6,6 +7,7 @@ module Snap.Route
   ( Routes
   , showRoutes
   , expandRoutes
+  , renderErrorWith
   , addRoute
   , get
   , get_
@@ -37,10 +39,12 @@ import Data.Predicate
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicate
-import qualified Data.List as L
-import qualified Data.Predicate.Env as E
-import qualified Data.ByteString as S
+
+import qualified Data.ByteString       as S
 import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Lazy  as Lazy
+import qualified Data.List             as L
+import qualified Data.Predicate.Env    as E
 
 data Pack m where
     Pack :: (Show p, Predicate p Request, FVal p ~ Error)
@@ -54,12 +58,23 @@ data Route m = Route
   , _pred    :: !(Pack m)
   }
 
+-- | Function to turn an 'Error' value into a 'Lazy.ByteString'.
+-- Clients can provide their own renderer using 'renderErrorWith'.
+type Renderer = Error -> Maybe Lazy.ByteString
+
+-- | The Routes monad state type.
+data St m = St ![Route m] !Renderer
+
+-- | Initial state.
+iniSt :: St m
+iniSt = St [] (fmap Lazy.fromStrict . _message)
+
 -- | The Routes monad is used to add routing declarations via 'addRoute' or
 -- one of 'get', 'post', etc.
 -- Routing declarations can then be turned into the ordinary snap format,
 -- i.e. @MonadSnap m => [(ByteString, m a)]@ or into strings.
 newtype Routes m a = Routes
-  { _unroutes :: State [Route m] a }
+  { _unroutes :: State (St m) a }
 
 instance Monad (Routes m) where
     return  = Routes . return
@@ -73,7 +88,11 @@ addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
          -> (TVal p -> m ())  -- ^ handler
          -> p                 -- ^ 'Predicate'
          -> Routes m ()
-addRoute m r x p = Routes $ modify (Route m r (Pack p x):)
+addRoute m r x p = Routes . modify $ \(St !rr !f) ->
+    St (Route m r (Pack p x) : rr) f
+
+renderErrorWith :: Monad m => Renderer -> Routes m ()
+renderErrorWith f = Routes . modify $ \(St !rr _) -> St rr f
 
 -- | Specialisation of 'addRoute' for a specific HTTP 'Method'.
 get, head, post, put, delete, trace, options, connect ::
@@ -110,7 +129,8 @@ connect_ p h = addRoute CONNECT p h (Const ())
 -- | Turn route definitions into a list of 'String's.
 showRoutes :: Routes m () -> [String]
 showRoutes (Routes routes) =
-    flip map (concat . normalise $ execState routes []) $ \x ->
+    let St rr _ = execState routes iniSt in
+    flip map (concat (normalise rr)) $ \x ->
         case _pred x of
             Pack p _ -> shows (_method x)
                       . (' ':)
@@ -123,7 +143,8 @@ showRoutes (Routes routes) =
 -- against the given Snap 'Request'.
 expandRoutes :: MonadSnap m => Routes m () -> [(ByteString, m ())]
 expandRoutes (Routes routes) =
-    map (\g -> (_path (L.head g), select g)) (normalise $ execState routes [])
+    let St rr f = execState routes iniSt in
+    map (\g -> (_path (L.head g), select f g)) (normalise rr)
 
 -- | Group routes by path.
 normalise :: [Route m] -> [[Route m]]
@@ -161,12 +182,12 @@ data Handler m = Handler
 -- (2) Evaluate 'Route' predicates.
 -- (3) Pick the first one which is 'Good', or else respond with status
 --     and message of the first one.
-select :: MonadSnap m => [Route m] -> m ()
-select g = do
+select :: MonadSnap m => Renderer -> [Route m] -> m ()
+select f g = do
     ms <- filterM byMethod g
     if null ms
         then do
-            respond (Error 405 Nothing)
+            respond f (Error 405 Nothing)
             modifyResponse (setHeader "Allow" validMethods)
         else evalAll ms
   where
@@ -181,7 +202,7 @@ select g = do
         req <- getRequest
         let (n, y) = partitionEithers . snd $ foldl' (evalSingle req) (E.empty, []) rs
         if null y
-            then respond (L.head n)
+            then respond f (L.head n)
             else closest y
 
     evalSingle :: MonadSnap m => Request -> (Env, [Either Error (Handler m)]) -> Route m -> (Env, [Either Error (Handler m)])
@@ -197,9 +218,9 @@ select g = do
             . map _handler
             . sortBy (compare `on` _delta)
 
-respond :: MonadSnap m => Error -> m ()
-respond e = do
+respond :: MonadSnap m => Renderer -> Error -> m ()
+respond f e = do
     putResponse . clearContentLength
                 . setResponseCode (fromIntegral . _status $ e)
                 $ emptyResponse
-    maybe (return ()) writeBS (_message e)
+    maybe (return ()) writeLBS (f e)
