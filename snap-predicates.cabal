@@ -1,8 +1,8 @@
 name:                snap-predicates
-version:             0.3.0
+version:             0.3.1
 synopsis:            Declarative routing for Snap.
-license:             MIT
-license-file:        LICENSE
+license:             OtherLicense
+license-file:        mpl-2.0.txt
 author:              Toralf Wittner, Brendan Hay
 maintainer:          Toralf Wittner <tw@dtex.org>
 copyright:           Copyright (c) 2013 Toralf Wittner, Brendan Hay
