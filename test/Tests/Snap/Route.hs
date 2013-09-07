@@ -1,11 +1,10 @@
-{-# LANGUAGE OverloadedStrings, TypeOperators #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
+
 module Tests.Snap.Route (tests) where
 
 import Control.Applicative hiding (Const)
 import Control.Monad.IO.Class
-import Test.Framework
-import Test.Framework.Providers.HUnit
-import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Predicate
 import Data.String
@@ -13,18 +12,22 @@ import Snap.Core
 import Snap.Predicate hiding (Text)
 import Snap.Predicate.Types
 import Snap.Route
+import Test.HUnit hiding (Test)
+import Test.Tasty
+import Test.Tasty.HUnit
+
 import qualified Snap.Test       as T
 import qualified Data.Map.Strict as M
 import qualified Data.Text       as Text
 
-tests :: [Test]
-tests =
-    [ testSitemap
-    , testMedia
+tests :: TestTree
+tests = testGroup "Snap.Route"
+    [ testCase "Sitemap" testSitemap
+    , testCase "Media Selection" testMedia
     ]
 
-testSitemap :: Test
-testSitemap = testCase "Sitemap" $ do
+testSitemap :: IO ()
+testSitemap = do
     let routes  = expandRoutes sitemap
     let handler = route routes
     assertEqual "Endpoints" ["/a", "/b", "/c", "/d", "/e", "/f", "/z"] (map fst routes)
@@ -179,8 +182,8 @@ testEndpointF m = do
 
 -- Media Selection Tests:
 
-testMedia :: Test
-testMedia = testCase "Media Selection" $ do
+testMedia :: IO ()
+testMedia = do
     let [(_, h)] = expandRoutes sitemapMedia
     expectMedia "application/json;q=0.3, application/x-thrift;q=0.7" "application/x-thrift" h
     expectMedia "application/json;q=0.7, application/x-thrift;q=0.3" "application/json" h

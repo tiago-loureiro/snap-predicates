@@ -1,26 +1,29 @@
-{-# LANGUAGE OverloadedStrings, FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
+
 module Tests.Snap.Predicate (tests) where
 
-import Test.Framework
-import Test.Framework.Providers.HUnit
-import Test.HUnit hiding (Test)
 import Data.ByteString (ByteString)
 import Data.Predicate
 import Snap.Predicate
 import Snap.Test
+import Test.Tasty
+import Test.Tasty.HUnit
+
 import qualified Data.Map.Strict as M
 
-tests :: [Test]
-tests =
-    [ testAccept
-    , testParam
-    , testParamOpt
-    , testAcceptJson
-    , testAcceptThrift
+tests :: TestTree
+tests = testGroup "Snap.Predicate"
+    [ testCase "Accept Predicate" testAccept
+    , testCase "AcceptJson Predicate" testParam
+    , testCase "AcceptThrift Predicate" testAcceptThrift
+    , testCase "Param Predicate" testAcceptJson
+    , testCase "ParamOpt Predicate" testParamOpt
     ]
 
-testAccept :: Test
-testAccept = testCase "Accept Predicate" $ do
+testAccept :: IO ()
+testAccept = do
     rq0 <- buildRequest $ addHeader "Accept" "x/y"
     let predicate = Accept (Type "x") (SubType "y")
     let true = T 0 $ MediaType (Type "x") (SubType "y") 1.0 []
@@ -31,8 +34,8 @@ testAccept = testCase "Accept Predicate" $ do
         (F (err 406 ("Expected 'Accept: \"x\"/\"y\"'.")))
         (eval predicate rq1)
 
-testAcceptJson :: Test
-testAcceptJson = testCase "AcceptJson Predicate" $ do
+testAcceptJson :: IO ()
+testAcceptJson = do
     rq0 <- buildRequest $ addHeader "Accept" "application/json"
     let predicate = Accept Application Json
     let true = T 0 $ MediaType Application Json 1.0 []
@@ -43,8 +46,8 @@ testAcceptJson = testCase "AcceptJson Predicate" $ do
         (F (err 406 ("Expected 'Accept: application/json'.")))
         (eval predicate rq1)
 
-testAcceptThrift :: Test
-testAcceptThrift = testCase "AcceptThrift Predicate" $ do
+testAcceptThrift :: IO ()
+testAcceptThrift = do
     rq0 <- buildRequest $ addHeader "Accept" "application/x-thrift"
     let predicate = Accept Application Thrift
     let true = T 0 $ MediaType Application Thrift 1.0 []
@@ -55,8 +58,8 @@ testAcceptThrift = testCase "AcceptThrift Predicate" $ do
         (F (err 406 ("Expected 'Accept: application/x-thrift'.")))
         (eval predicate rq1)
 
-testParam :: Test
-testParam = testCase "Param Predicate" $ do
+testParam :: IO ()
+testParam = do
     rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
     assertEqual "Matching Param" (T 0 "y") (eval (Param "x" :: Param ByteString) rq0)
 
@@ -65,8 +68,8 @@ testParam = testCase "Param Predicate" $ do
         (F (err 400 ("Missing parameter 'x'.")))
         (eval (Param "x" :: Param ByteString) rq1)
 
-testParamOpt :: Test
-testParamOpt = testCase "ParamOpt Predicate" $ do
+testParamOpt :: IO ()
+testParamOpt = do
     rq0 <- buildRequest $ get "/" (M.fromList [("x", ["y", "z"])])
     assertEqual "Matching Param 1" (T 0 (Just "y")) (eval (ParamOpt "x" :: ParamOpt ByteString) rq0)
 

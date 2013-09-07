@@ -5,13 +5,13 @@
 module Tests.Data.Predicate (tests) where
 
 import Control.Applicative hiding (Const, empty)
-import Test.Framework
-import Test.Framework.Providers.QuickCheck2
-import Test.QuickCheck
 import Data.Predicate
+import Test.QuickCheck
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
-tests :: [Test]
-tests =
+tests :: TestTree
+tests = testGroup "Data.Predicate"
     [ testProperty "Const" testConst
     , testProperty "Fail" testFail
     , testProperty "(:&:)" testAnd
