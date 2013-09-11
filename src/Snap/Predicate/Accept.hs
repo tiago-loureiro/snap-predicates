@@ -26,7 +26,7 @@ instance (MType t, MSubType s) => Predicate (Accept t s) Request where
         mtypes <- E.lookup "accept" >>= maybe (readMediaTypes "accept" r) return
         if null mtypes
             then return (T 0 (MediaType x y 1.0 []))
-            else case mediaType True x y mtypes of
+            else case mediaType x y mtypes of
                Just m  -> return (T (1.0 - _quality m) m)
                Nothing -> return (F (err 406 message))
       where

@@ -27,8 +27,8 @@ instance (MType t, MSubType s) => Predicate (ContentType t s) Request where
     type TVal (ContentType t s) = MediaType t s
     apply (ContentType x y) r   = do
         mtypes <- E.lookup "content-type" >>= maybe (readMediaTypes "content-type" r) return
-        case mediaType False x y mtypes of
-               Just m  -> return (T 0 m)
+        case contentType x y mtypes of
+               Just m  -> return (T (1.0 - _quality m) m)
                Nothing -> return (F (err 415 message))
       where
         message = "Expected 'Content-Type: "

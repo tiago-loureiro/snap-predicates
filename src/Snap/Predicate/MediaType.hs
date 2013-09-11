@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Snap.Predicate.MediaType
   ( -- * Types
     MType (..)
@@ -6,7 +7,6 @@ module Snap.Predicate.MediaType
   , MediaType (..)
 
   -- * Media-Types
-  , Type (..)
   , All (..)
   , Application (..)
   , Audio (..)
@@ -17,7 +17,6 @@ module Snap.Predicate.MediaType
   , Video (..)
 
   -- * Media-Sub-Types
-  , SubType (..)
   , AtomXml (..)
   , Css (..)
   , Csv (..)
@@ -60,11 +59,11 @@ import Data.ByteString (ByteString)
 
 -- | Type-class for converting a 'ByteString' to a media-type.
 class (Show a, Eq a) => MType a where
-    toType :: a -> ByteString -> Maybe a
+    toType :: ByteString -> Maybe a
 
 -- | Type-class for converting a 'ByteString' to a media-subtype.
 class (Show a, Eq a) => MSubType a where
-    toSubType :: a -> ByteString -> Maybe a
+    toSubType :: ByteString -> Maybe a
 
 -- | The Media-type representation.
 data MediaType t s = MediaType
@@ -76,20 +75,11 @@ data MediaType t s = MediaType
 
 -- Media-Types:
 
--- | Generic media-type.
-data Type = Type ByteString deriving Eq
-
-instance MType Type where
-    toType o@(Type t) s = if t == s then Just o else Nothing
-
-instance Show Type where
-    show (Type t) = show t
-
 data Application = Application deriving Eq
 
 instance MType Application where
-    toType _ "application" = Just Application
-    toType _ _             = Nothing
+    toType "application" = Just Application
+    toType _             = Nothing
 
 instance Show Application where
     show _ = "application"
@@ -97,8 +87,8 @@ instance Show Application where
 data Audio = Audio deriving Eq
 
 instance MType Audio where
-    toType _ "audio" = Just Audio
-    toType _ _       = Nothing
+    toType "audio" = Just Audio
+    toType _       = Nothing
 
 instance Show Audio where
     show _ = "audio"
@@ -106,8 +96,8 @@ instance Show Audio where
 data Image = Image deriving Eq
 
 instance MType Image where
-    toType _ "image" = Just Image
-    toType _ _       = Nothing
+    toType "image" = Just Image
+    toType _       = Nothing
 
 instance Show Image where
     show _ = "image"
@@ -115,8 +105,8 @@ instance Show Image where
 data Message = Message deriving Eq
 
 instance MType Message where
-    toType _ "message" = Just Message
-    toType _ _         = Nothing
+    toType "message" = Just Message
+    toType _         = Nothing
 
 instance Show Message where
     show _ = "message"
@@ -124,8 +114,8 @@ instance Show Message where
 data Multipart = Multipart deriving Eq
 
 instance MType Multipart where
-    toType _ "multipart" = Just Multipart
-    toType _ _           = Nothing
+    toType "multipart" = Just Multipart
+    toType _           = Nothing
 
 instance Show Multipart where
     show _ = "multipart"
@@ -133,8 +123,8 @@ instance Show Multipart where
 data Text = Text deriving Eq
 
 instance MType Text where
-    toType _ "text" = Just Text
-    toType _ _      = Nothing
+    toType "text" = Just Text
+    toType _      = Nothing
 
 instance Show Text where
     show _ = "text"
@@ -142,28 +132,19 @@ instance Show Text where
 data Video = Video deriving Eq
 
 instance MType Video where
-    toType _ "video" = Just Video
-    toType _ _       = Nothing
+    toType "video" = Just Video
+    toType _       = Nothing
 
 instance Show Video where
     show _ = "video"
 
 -- Media-Subtypes:
 
--- | Generic media-subtype.
-data SubType = SubType ByteString deriving Eq
-
-instance MSubType SubType where
-    toSubType o@(SubType t) s = if t == s then Just o else Nothing
-
-instance Show SubType where
-    show (SubType t) = show t
-
 data AtomXml = AtomXml deriving Eq
 
 instance MSubType AtomXml where
-    toSubType _ "atom+xml" = Just AtomXml
-    toSubType _ _          = Nothing
+    toSubType "atom+xml" = Just AtomXml
+    toSubType _          = Nothing
 
 instance Show AtomXml where
     show _ = "atom+xml"
@@ -171,8 +152,8 @@ instance Show AtomXml where
 data Css = Css deriving Eq
 
 instance MSubType Css where
-    toSubType _ "css" = Just Css
-    toSubType _ _     = Nothing
+    toSubType "css" = Just Css
+    toSubType _     = Nothing
 
 instance Show Css where
     show _ = "css"
@@ -180,8 +161,8 @@ instance Show Css where
 data Csv = Csv deriving Eq
 
 instance MSubType Csv where
-    toSubType _ "csv" = Just Csv
-    toSubType _ _     = Nothing
+    toSubType "csv" = Just Csv
+    toSubType _     = Nothing
 
 instance Show Csv where
     show _ = "csv"
@@ -189,8 +170,8 @@ instance Show Csv where
 data Encrypted = Encrypted deriving Eq
 
 instance MSubType Encrypted where
-    toSubType _ "encrypted" = Just Encrypted
-    toSubType _ _           = Nothing
+    toSubType "encrypted" = Just Encrypted
+    toSubType _           = Nothing
 
 instance Show Encrypted where
     show _ = "encrypted"
@@ -198,8 +179,8 @@ instance Show Encrypted where
 data FormData = FormData deriving Eq
 
 instance MSubType FormData where
-    toSubType _ "form-data" = Just FormData
-    toSubType _ _           = Nothing
+    toSubType "form-data" = Just FormData
+    toSubType _           = Nothing
 
 instance Show FormData where
     show _ = "form-data"
@@ -207,8 +188,8 @@ instance Show FormData where
 data FormUrlEncoded = FormUrlEncoded deriving Eq
 
 instance MSubType FormUrlEncoded where
-    toSubType _ "x-www-form-urlencoded" = Just FormUrlEncoded
-    toSubType _ _                       = Nothing
+    toSubType "x-www-form-urlencoded" = Just FormUrlEncoded
+    toSubType _                       = Nothing
 
 instance Show FormUrlEncoded where
     show _ = "x-www-form-urlencoded"
@@ -216,8 +197,8 @@ instance Show FormUrlEncoded where
 data Gif = Gif deriving Eq
 
 instance MSubType Gif where
-    toSubType _ "gif" = Just Gif
-    toSubType _ _     = Nothing
+    toSubType "gif" = Just Gif
+    toSubType _     = Nothing
 
 instance Show Gif where
     show _ = "gif"
@@ -225,8 +206,8 @@ instance Show Gif where
 data Gzip = Gzip deriving Eq
 
 instance MSubType Gzip where
-    toSubType _ "gzip" = Just Gzip
-    toSubType _ _      = Nothing
+    toSubType "gzip" = Just Gzip
+    toSubType _      = Nothing
 
 instance Show Gzip where
     show _ = "gzip"
@@ -234,8 +215,8 @@ instance Show Gzip where
 data Javascript = Javascript deriving Eq
 
 instance MSubType Javascript where
-    toSubType _ "javascript" = Just Javascript
-    toSubType _ _            = Nothing
+    toSubType "javascript" = Just Javascript
+    toSubType _            = Nothing
 
 instance Show Javascript where
     show _ = "javascript"
@@ -243,8 +224,8 @@ instance Show Javascript where
 data Jpeg = Jpeg deriving Eq
 
 instance MSubType Jpeg where
-    toSubType _ "jpeg" = Just Jpeg
-    toSubType _ _      = Nothing
+    toSubType "jpeg" = Just Jpeg
+    toSubType _      = Nothing
 
 instance Show Jpeg where
     show _ = "jpeg"
@@ -252,8 +233,8 @@ instance Show Jpeg where
 data Json = Json deriving Eq
 
 instance MSubType Json where
-    toSubType _ "json" = Just Json
-    toSubType _ _      = Nothing
+    toSubType "json" = Just Json
+    toSubType _      = Nothing
 
 instance Show Json where
     show _ = "json"
@@ -261,8 +242,8 @@ instance Show Json where
 data Mixed = Mixed deriving Eq
 
 instance MSubType Mixed where
-    toSubType _ "mixed" = Just Mixed
-    toSubType _ _       = Nothing
+    toSubType "mixed" = Just Mixed
+    toSubType _       = Nothing
 
 instance Show Mixed where
     show _ = "mixed"
@@ -270,8 +251,8 @@ instance Show Mixed where
 data Mp4 = Mp4 deriving Eq
 
 instance MSubType Mp4 where
-    toSubType _ "mp4" = Just Mp4
-    toSubType _ _     = Nothing
+    toSubType "mp4" = Just Mp4
+    toSubType _     = Nothing
 
 instance Show Mp4 where
     show _ = "mp4"
@@ -279,8 +260,8 @@ instance Show Mp4 where
 data Mpeg = Mpeg deriving Eq
 
 instance MSubType Mpeg where
-    toSubType _ "mpeg" = Just Mpeg
-    toSubType _ _      = Nothing
+    toSubType "mpeg" = Just Mpeg
+    toSubType _      = Nothing
 
 instance Show Mpeg where
     show _ = "mpeg"
@@ -288,8 +269,8 @@ instance Show Mpeg where
 data OctetStream = OctetStream deriving Eq
 
 instance MSubType OctetStream where
-    toSubType _ "octet-stream" = Just OctetStream
-    toSubType _ _              = Nothing
+    toSubType "octet-stream" = Just OctetStream
+    toSubType _              = Nothing
 
 instance Show OctetStream where
     show _ = "octet-stream"
@@ -297,8 +278,8 @@ instance Show OctetStream where
 data Ogg = Ogg deriving Eq
 
 instance MSubType Ogg where
-    toSubType _ "ogg" = Just Ogg
-    toSubType _ _     = Nothing
+    toSubType "ogg" = Just Ogg
+    toSubType _     = Nothing
 
 instance Show Ogg where
     show _ = "ogg"
@@ -306,8 +287,8 @@ instance Show Ogg where
 data Partial = Partial deriving Eq
 
 instance MSubType Partial where
-    toSubType _ "partial" = Just Partial
-    toSubType _ _         = Nothing
+    toSubType "partial" = Just Partial
+    toSubType _         = Nothing
 
 instance Show Partial where
     show _ = "partial"
@@ -315,8 +296,8 @@ instance Show Partial where
 data Pkcs12 = Pkcs12 deriving Eq
 
 instance MSubType Pkcs12 where
-    toSubType _ "x-pkcs12" = Just Pkcs12
-    toSubType _ _          = Nothing
+    toSubType "x-pkcs12" = Just Pkcs12
+    toSubType _          = Nothing
 
 instance Show Pkcs12 where
     show _ = "x-pkcs12"
@@ -324,8 +305,8 @@ instance Show Pkcs12 where
 data Pkcs7Cert = Pkcs7Cert deriving Eq
 
 instance MSubType Pkcs7Cert where
-    toSubType _ "x-pkcs7-certificates" = Just Pkcs7Cert
-    toSubType _ _                      = Nothing
+    toSubType "x-pkcs7-certificates" = Just Pkcs7Cert
+    toSubType _                      = Nothing
 
 instance Show Pkcs7Cert where
     show _ = "x-pkcs7-certificates"
@@ -333,8 +314,8 @@ instance Show Pkcs7Cert where
 data Pkcs7Sig = Pkcs7Sig deriving Eq
 
 instance MSubType Pkcs7Sig where
-    toSubType _ "x-pkcs7-signature" = Just Pkcs7Sig
-    toSubType _ _                   = Nothing
+    toSubType "x-pkcs7-signature" = Just Pkcs7Sig
+    toSubType _                   = Nothing
 
 instance Show Pkcs7Sig where
     show _ = "x-pkcs7-signature"
@@ -342,8 +323,8 @@ instance Show Pkcs7Sig where
 data Pkcs7Mime = Pkcs7Mime deriving Eq
 
 instance MSubType Pkcs7Mime where
-    toSubType _ "x-pkcs7-mime" = Just Pkcs7Mime
-    toSubType _ _              = Nothing
+    toSubType "x-pkcs7-mime" = Just Pkcs7Mime
+    toSubType _              = Nothing
 
 instance Show Pkcs7Mime where
     show _ = "x-pkcs7-mime"
@@ -351,8 +332,8 @@ instance Show Pkcs7Mime where
 data Pkcs7CertRqRs = Pkcs7CertRqRs deriving Eq
 
 instance MSubType Pkcs7CertRqRs where
-    toSubType _ "x-pkcs7-certreqresp" = Just Pkcs7CertRqRs
-    toSubType _ _                     = Nothing
+    toSubType "x-pkcs7-certreqresp" = Just Pkcs7CertRqRs
+    toSubType _                     = Nothing
 
 instance Show Pkcs7CertRqRs where
     show _ = "x-pkcs7-certreqresp"
@@ -360,8 +341,8 @@ instance Show Pkcs7CertRqRs where
 data Plain = Plain deriving Eq
 
 instance MSubType Plain where
-    toSubType _ "plain" = Just Plain
-    toSubType _ _       = Nothing
+    toSubType "plain" = Just Plain
+    toSubType _       = Nothing
 
 instance Show Plain where
     show _ = "plain"
@@ -369,8 +350,8 @@ instance Show Plain where
 data Png = Png deriving Eq
 
 instance MSubType Png where
-    toSubType _ "png" = Just Png
-    toSubType _ _     = Nothing
+    toSubType "png" = Just Png
+    toSubType _     = Nothing
 
 instance Show Png where
     show _ = "png"
@@ -378,8 +359,8 @@ instance Show Png where
 data Postscript = Postscript deriving Eq
 
 instance MSubType Postscript where
-    toSubType _ "postscript" = Just Postscript
-    toSubType _ _            = Nothing
+    toSubType "postscript" = Just Postscript
+    toSubType _            = Nothing
 
 instance Show Postscript where
     show _ = "postscript"
@@ -387,8 +368,8 @@ instance Show Postscript where
 data Protobuf = Protobuf deriving Eq
 
 instance MSubType Protobuf where
-    toSubType _ "x-protobuf" = Just Protobuf
-    toSubType _ _            = Nothing
+    toSubType "x-protobuf" = Just Protobuf
+    toSubType _            = Nothing
 
 instance Show Protobuf where
     show _ = "x-protobuf"
@@ -396,8 +377,8 @@ instance Show Protobuf where
 data RdfXml = RdfXml deriving Eq
 
 instance MSubType RdfXml where
-    toSubType _ "rdf+xml" = Just RdfXml
-    toSubType _ _         = Nothing
+    toSubType "rdf+xml" = Just RdfXml
+    toSubType _         = Nothing
 
 instance Show RdfXml where
     show _ = "rdf+xml"
@@ -405,8 +386,8 @@ instance Show RdfXml where
 data RssXml = RssXml deriving Eq
 
 instance MSubType RssXml where
-    toSubType _ "rss+xml" = Just RssXml
-    toSubType _ _         = Nothing
+    toSubType "rss+xml" = Just RssXml
+    toSubType _         = Nothing
 
 instance Show RssXml where
     show _ = "rss+xml"
@@ -414,8 +395,8 @@ instance Show RssXml where
 data Tar = Tar deriving Eq
 
 instance MSubType Tar where
-    toSubType _ "tar" = Just Tar
-    toSubType _ _     = Nothing
+    toSubType "tar" = Just Tar
+    toSubType _     = Nothing
 
 instance Show Tar where
     show _ = "tar"
@@ -423,8 +404,8 @@ instance Show Tar where
 data Tiff = Tiff deriving Eq
 
 instance MSubType Tiff where
-    toSubType _ "tiff" = Just Tiff
-    toSubType _ _      = Nothing
+    toSubType "tiff" = Just Tiff
+    toSubType _      = Nothing
 
 instance Show Tiff where
     show _ = "tiff"
@@ -432,8 +413,8 @@ instance Show Tiff where
 data Thrift = Thrift deriving Eq
 
 instance MSubType Thrift where
-    toSubType _ "x-thrift" = Just Thrift
-    toSubType _ _          = Nothing
+    toSubType "x-thrift" = Just Thrift
+    toSubType _          = Nothing
 
 instance Show Thrift where
     show _ = "x-thrift"
@@ -441,8 +422,8 @@ instance Show Thrift where
 data Vorbis = Vorbis deriving Eq
 
 instance MSubType Vorbis where
-    toSubType _ "vorbis" = Just Vorbis
-    toSubType _ _        = Nothing
+    toSubType "vorbis" = Just Vorbis
+    toSubType _        = Nothing
 
 instance Show Vorbis where
     show _ = "vorbis"
@@ -450,8 +431,8 @@ instance Show Vorbis where
 data Webm = Webm deriving Eq
 
 instance MSubType Webm where
-    toSubType _ "webm" = Just Webm
-    toSubType _ _      = Nothing
+    toSubType "webm" = Just Webm
+    toSubType _      = Nothing
 
 instance Show Webm where
     show _ = "webm"
@@ -459,8 +440,8 @@ instance Show Webm where
 data XhtmlXml = XhtmlXml deriving Eq
 
 instance MSubType XhtmlXml where
-    toSubType _ "xhtml+xml" = Just XhtmlXml
-    toSubType _ _           = Nothing
+    toSubType "xhtml+xml" = Just XhtmlXml
+    toSubType _           = Nothing
 
 instance Show XhtmlXml where
     show _ = "xhtml+xml"
@@ -468,8 +449,8 @@ instance Show XhtmlXml where
 data Xml = Xml deriving Eq
 
 instance MSubType Xml where
-    toSubType _ "xml" = Just Xml
-    toSubType _ _     = Nothing
+    toSubType "xml" = Just Xml
+    toSubType _     = Nothing
 
 instance Show Xml where
     show _ = "xml"
@@ -478,12 +459,12 @@ instance Show Xml where
 data All = All deriving Eq
 
 instance MType All where
-    toType _ "*" = Just All
-    toType _ _   = Nothing
+    toType "*" = Just All
+    toType _   = Nothing
 
 instance MSubType All where
-    toSubType _ "*" = Just All
-    toSubType _ _   = Nothing
+    toSubType "*" = Just All
+    toSubType _   = Nothing
 
 instance Show All where
     show _ = "*"
