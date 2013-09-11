@@ -1,41 +1,68 @@
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Snap.Predicate.Content
-  ( Content
-  , ContentType (..)
+  ( ContentType (..)
   , module Snap.Predicate.MediaType
   )
 where
 
+import Control.Monad
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (pack, unpack)
 import Data.Monoid hiding (All)
-import Data.String
 import Data.Predicate
+import GHC.TypeLits
+import Data.Maybe
 import Snap.Core hiding (headers)
 import Snap.Predicate.Error
 import Snap.Predicate.MediaType
 import Snap.Predicate.MediaType.Internal
-import qualified Data.Predicate.Env as E
 
-type Content x y = MediaType x y
+import qualified Data.Predicate.Env           as E
+import qualified Snap.Predicate.Parser.Accept as A
 
 -- | A 'Predicate' against the 'Request's \"Content-Type\" header.
-data ContentType t s = ContentType t s deriving Eq
+data ContentType (t :: Symbol) (s :: Symbol) = ContentType
 
-instance (MType t, MSubType s) => Predicate (ContentType t s) Request where
+type1 :: SingI t => ContentType t s -> ByteString
+type1 m = withSing (f m)
+  where
+    f :: ContentType t s -> Sing t -> ByteString
+    f _ t = pack $ fromSing t
+
+type2 :: SingI s => ContentType t s -> ByteString
+type2 m = withSing (f m)
+  where
+    f :: ContentType t s -> Sing s -> ByteString
+    f _ s = pack $ fromSing s
+
+instance (SingI t, SingI s) => Predicate (ContentType t s) Request where
     type FVal (ContentType t s) = Error
-    type TVal (ContentType t s) = MediaType t s
-    apply (ContentType x y) r   = do
+    type TVal (ContentType t s) = Media t s
+    apply c r = do
         mtypes <- E.lookup "content-type" >>= maybe (readMediaTypes "content-type" r) return
-        case contentType x y mtypes of
-               Just m  -> return (T (1.0 - _quality m) m)
-               Nothing -> return (F (err 415 message))
+        case findContentType c mtypes of
+               m:_ -> return (T (1.0 - mediaQuality m) m)
+               []  -> return (F (err 415 message))
       where
-        message = "Expected 'Content-Type: "
-                    <> fromString (show x)
-                    <> "/"
-                    <> fromString (show y)
-                    <> "'."
+        message = "Expected 'Content-Type: " <> type1 c <> "/" <> type2 c <> "'."
 
-instance (Show t, Show s) => Show (ContentType t s) where
-    show (ContentType t s) = "ContentType: " ++ show t ++ "/" ++ show s
+instance (SingI t, SingI s) => Show (ContentType t s) where
+    show c = unpack $ "ContentType: " <> type1 c <> "/" <> type2 c
+
+findContentType :: (SingI t, SingI s) => ContentType t s -> [A.MediaType] -> [Media t s]
+findContentType c = mapMaybe (\m -> do
+    let ct = type1 c
+        cs = type2 c
+        mt = A.medType m
+        ms = A.medSubtype m
+    guard (ct == "*" || ct == mt && cs == "*" || cs == ms)
+    return $ Media mt ms (quality ct cs) (A.medParams m))
+  where
+    quality "*" "*" = 0
+    quality "*"  _  = 0.2
+    quality  _  "*" = 0.5
+    quality  _   _  = 1.0

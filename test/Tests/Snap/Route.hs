@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators     #-}
 
@@ -9,7 +10,7 @@ import Data.ByteString (ByteString)
 import Data.Predicate
 import Data.String
 import Snap.Core
-import Snap.Predicate hiding (Text)
+import Snap.Predicate
 import Snap.Predicate.Types
 import Snap.Route
 import Test.HUnit hiding (Test)
@@ -41,7 +42,7 @@ testSitemap = do
 sitemap :: Routes Snap ()
 sitemap = do
     get "/a" handlerA
-        (Accept Application Json :&: (Param "name" :|: Param "nick") :&: Param "foo")
+        (Accept :&: (Param "name" :|: Param "nick") :&: Param "foo")
 
     get "/b" handlerB
         (Param "baz")
@@ -61,7 +62,7 @@ sitemap = do
     get "/z" handlerZ
         (Fail (err 410 "Gone."))
 
-handlerA :: MediaType Application Json :*: Int :*: ByteString -> Snap ()
+handlerA :: Media "application" "json" :*: Int :*: ByteString -> Snap ()
 handlerA (_ :*: i :*: _) = writeText (fromString . show $ i)
 
 handlerB :: Int -> Snap ()
@@ -79,7 +80,7 @@ handlerE foo = writeText (Text.pack . show $ foo)
 handlerF :: CSV Int -> Snap ()
 handlerF foo = writeText (Text.pack . show . sum . list $ foo)
 
-handlerZ :: MediaType Application Json -> Snap ()
+handlerZ :: Media "application" "json" -> Snap ()
 handlerZ _ = do
     rq <- getRequest
     with (Param "bar" :&: Param "baz") rq $ \(bar :*: baz) -> do
@@ -190,13 +191,13 @@ testMedia = do
 
 sitemapMedia :: Routes Snap ()
 sitemapMedia = do
-    get "/media" handlerJson   $ Accept Application Json
-    get "/media" handlerThrift $ Accept Application Thrift
+    get "/media" handlerJson   $ Accept
+    get "/media" handlerThrift $ Accept
 
-handlerJson :: MediaType Application Json -> Snap ()
+handlerJson :: Media "application" "json" -> Snap ()
 handlerJson _ = writeBS "application/json"
 
-handlerThrift :: MediaType Application Thrift -> Snap ()
+handlerThrift :: Media "application" "x-thrift" -> Snap ()
 handlerThrift _ = writeBS "application/x-thrift"
 
 expectMedia :: ByteString -> ByteString -> Snap () -> Assertion
