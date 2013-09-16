@@ -41,26 +41,26 @@ testSitemap = do
 
 sitemap :: Routes Snap ()
 sitemap = do
-    get "/a" handlerA
-        (Accept :&: (Param "name" :|: Param "nick") :&: Param "foo")
+    get "/a" handlerA $
+        accept :&: (param "name" :|: param "nick") :&: param "foo"
 
-    get "/b" handlerB
-        (Param "baz")
+    get "/b" handlerB $
+        param "baz"
 
-    get "/c" handlerC
-        (ParamOpt "foo")
+    get "/c" handlerC $
+        paramOpt "foo"
 
-    get "/d" handlerD
-        (ParamDef "foo" 0)
+    get "/d" handlerD $
+        paramDef "foo" 0
 
-    get "/e" handlerE
-        (HdrDef "foo" 0)
+    get "/e" handlerE $
+        hdrDef "foo" 0
 
-    get "/f" handlerF
-        (Param "foo")
+    get "/f" handlerF $
+        param "foo"
 
-    get "/z" handlerZ
-        (Fail (err 410 "Gone."))
+    get "/z" handlerZ $
+        Fail (err 410 "Gone.")
 
 handlerA :: Media "application" "json" :*: Int :*: ByteString -> Snap ()
 handlerA (_ :*: i :*: _) = writeText (fromString . show $ i)
@@ -83,7 +83,7 @@ handlerF foo = writeText (Text.pack . show . sum . list $ foo)
 handlerZ :: Media "application" "json" -> Snap ()
 handlerZ _ = do
     rq <- getRequest
-    with (Param "bar" :&: Param "baz") rq $ \(bar :*: baz) -> do
+    with (param "bar" :&: param "baz") rq $ \(bar :*: baz) -> do
         writeBS bar
         writeBS baz
 
@@ -191,8 +191,8 @@ testMedia = do
 
 sitemapMedia :: Routes Snap ()
 sitemapMedia = do
-    get "/media" handlerJson   $ Accept
-    get "/media" handlerThrift $ Accept
+    get "/media" handlerJson   accept
+    get "/media" handlerThrift accept
 
 handlerJson :: Media "application" "json" -> Snap ()
 handlerJson _ = writeBS "application/json"
@@ -201,8 +201,8 @@ handlerThrift :: Media "application" "x-thrift" -> Snap ()
 handlerThrift _ = writeBS "application/x-thrift"
 
 expectMedia :: ByteString -> ByteString -> Snap () -> Assertion
-expectMedia hdr res m = do
+expectMedia h res m = do
     let rq0 = T.get "/media" M.empty >>
-              T.addHeader "Accept" hdr
+              T.addHeader "Accept" h
     txt0 <- T.runHandler rq0 m >>= liftIO . T.getResponseBody
     assertEqual "media type" res txt0

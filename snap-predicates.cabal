@@ -31,6 +31,7 @@ library
     exposed-modules:
         Data.Predicate
       , Data.Predicate.Env
+      , Data.Predicate.Descr
       , Snap.Predicate
       , Snap.Predicate.Accept
       , Snap.Predicate.Error
@@ -43,8 +44,9 @@ library
       , Snap.Route
 
     other-modules:
-        Snap.Predicate.Internal
-        Snap.Predicate.MediaType.Internal
+        Data.Predicate.Internal
+      , Snap.Predicate.Internal
+      , Snap.Predicate.MediaType.Internal
       , Snap.Predicate.Parser.Accept
       , Snap.Predicate.Parser.Shared
 
@@ -56,6 +58,7 @@ library
       , containers       >= 0.5
       , monads-tf        >= 0.1
       , snap-core        >= 0.9
+      , tagged           >= 0.7
       , text             >= 0.11
       , transformers     >= 0.3
 
@@ -82,6 +85,7 @@ test-suite snap-predicates-tests
       , monads-tf        >= 0.1
       , QuickCheck       >= 2.3
       , snap-core        >= 0.9
+      , tagged           >= 0.7
       , tasty            >= 0.3
       , tasty-hunit      >= 0.2
       , tasty-quickcheck >= 0.3

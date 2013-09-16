@@ -4,7 +4,8 @@
 {-# LANGUAGE TypeFamilies          #-}
 
 module Snap.Predicate.Accept
-  ( Accept (..)
+  ( Accept
+  , accept
   , module Snap.Predicate.MediaType
   )
 where
@@ -14,6 +15,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack, unpack)
 import Data.Monoid hiding (All)
 import Data.Predicate
+import Data.Predicate.Descr
 import GHC.TypeLits
 import Data.Maybe
 import Snap.Core hiding (headers)
@@ -26,6 +28,10 @@ import qualified Snap.Predicate.Parser.Accept as A
 
 -- | A 'Predicate' against the 'Request's \"Accept\" header.
 data Accept (t :: Symbol) (s :: Symbol) = Accept
+
+{-# INLINE accept #-}
+accept :: Accept t s
+accept = Accept
 
 type1 :: SingI t => Accept t s -> ByteString
 type1 m = withSing (f m)
@@ -49,12 +55,15 @@ instance (SingI t, SingI s) => Predicate (Accept t s) Request where
             then return (T 0 (Media (type1 a) (type2 a) 1.0 []))
             else case findMediaType a mtypes of
                m:_ -> return (T (1.0 - mediaQuality m) m)
-               []  -> return (F (err 406 message))
+               []  -> return (F (err 406 msg))
       where
-        message = "Expected 'Accept: " <> type1 a <> "/" <> type2 a <> "'."
+        msg = "Expected 'Accept: " <> type1 a <> "/" <> type2 a <> "'."
 
 instance (SingI t, SingI s) => Show (Accept t s) where
     show a = unpack $ "Accept: " <> type1 a <> "/" <> type2 a
+
+instance (SingI t, SingI s) => Description (Accept t s) where
+    describe a = DHeader "Accept" (Sym (show $ type1 a <> "/" <> type2 a)) Required
 
 findMediaType :: (SingI t, SingI s) => Accept t s -> [A.MediaType] -> [Media t s]
 findMediaType a = mapMaybe (\m -> do

@@ -5,7 +5,9 @@
 {-# LANGUAGE FlexibleContexts  #-}
 module Snap.Route
   ( Routes
+  , RouteDescr (..)
   , showRoutes
+  , describeRoutes
   , expandRoutes
   , renderErrorWith
   , addRoute
@@ -36,6 +38,7 @@ import Data.Either
 import Data.Function
 import Data.List hiding (head, delete)
 import Data.Predicate
+import Data.Predicate.Descr
 import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicate
@@ -47,7 +50,7 @@ import qualified Data.List             as L
 import qualified Data.Predicate.Env    as E
 
 data Pack m where
-    Pack :: (Show p, Predicate p Request, FVal p ~ Error)
+    Pack :: (Description p, Show p, Predicate p Request, FVal p ~ Error)
          => p
          -> (TVal p -> m ())
          -> Pack m
@@ -58,6 +61,12 @@ data Route m = Route
   , _pred    :: !(Pack m)
   }
 
+data RouteDescr = RouteDescr
+    { routeMethod  :: !Method
+    , routePath    :: !ByteString
+    , routeDescr   :: !Descr
+    } deriving Show
+
 -- | Function to turn an 'Error' value into a 'Lazy.ByteString'.
 -- Clients can provide their own renderer using 'renderErrorWith'.
 type Renderer = Error -> Maybe Lazy.ByteString
@@ -67,7 +76,7 @@ data St m = St ![Route m] !Renderer
 
 -- | Initial state.
 iniSt :: St m
-iniSt = St [] (fmap Lazy.fromStrict . _message)
+iniSt = St [] (fmap Lazy.fromStrict . message)
 
 -- | The Routes monad is used to add routing declarations via 'addRoute' or
 -- one of 'get', 'post', etc.
@@ -82,7 +91,7 @@ instance Monad (Routes m) where
 
 -- | Add a route for some 'Method' and path (potentially with variable
 -- captures), and constrained the some 'Predicate'.
-addRoute :: (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
+addRoute :: (MonadSnap m, Description p, Show p, Predicate p Request, FVal p ~ Error)
          => Method
          -> ByteString        -- ^ path
          -> (TVal p -> m ())  -- ^ handler
@@ -96,7 +105,7 @@ renderErrorWith f = Routes . modify $ \(St !rr _) -> St rr f
 
 -- | Specialisation of 'addRoute' for a specific HTTP 'Method'.
 get, head, post, put, delete, trace, options, connect ::
-    (MonadSnap m, Show p, Predicate p Request, FVal p ~ Error)
+    (MonadSnap m, Description p, Show p, Predicate p Request, FVal p ~ Error)
     => ByteString        -- ^ path
     -> (TVal p -> m ())  -- ^ handler
     -> p                 -- ^ 'Predicate'
@@ -129,14 +138,22 @@ connect_ p h = addRoute CONNECT p h (Const ())
 -- | Turn route definitions into a list of 'String's.
 showRoutes :: Routes m () -> [String]
 showRoutes (Routes routes) =
-    let St rr _ = execState routes iniSt in
-    flip map (concat (normalise rr)) $ \x ->
+    let St rr _ = execState routes iniSt
+    in flip map (concat (normalise rr)) $ \x ->
         case _pred x of
             Pack p _ -> shows (_method x)
                       . (' ':)
                       . shows (_path x)
                       . (' ':)
                       . shows p $ ""
+
+-- | Turn route definitions into corresponding descriptions, i.e.
+-- 'RouteDescr' values which contain the description AST.
+describeRoutes :: Routes m () -> [RouteDescr]
+describeRoutes (Routes routes) =
+    let St rr _ = execState routes iniSt
+    in flip map (concat (normalise rr)) $ \x ->
+        case _pred x of Pack p _ -> RouteDescr (_method x) (_path x) (describe p)
 
 -- | Turn route definitions into \"snapable\" format, i.e.
 -- Routes are grouped per path and selection evaluates routes
@@ -221,6 +238,6 @@ select f g = do
 respond :: MonadSnap m => Renderer -> Error -> m ()
 respond f e = do
     putResponse . clearContentLength
-                . setResponseCode (fromIntegral . _status $ e)
+                . setResponseCode (fromIntegral . status $ e)
                 $ emptyResponse
     maybe (return ()) writeLBS (f e)

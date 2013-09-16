@@ -1,14 +1,17 @@
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances     #-}
+
 module Data.Predicate where
 
 import Prelude hiding (and, or)
 import Control.Applicative hiding (Const)
 import Control.Monad.State.Strict
+import Data.Predicate.Descr
 import Data.Predicate.Env (Env)
+import Data.Typeable
 import qualified Data.Predicate.Env as E
 
 -- | 'Delta' is a measure of distance. It is (optionally)
@@ -55,6 +58,9 @@ instance Predicate (Const f t) a where
 instance Show t => Show (Const f t) where
     show (Const a) = "Const " ++ show a
 
+instance (Show t, Typeable t) => Description (Const f t) where
+    describe (Const a) = DConst "Const" (Val (show a) (typeOf a))
+
 -- | A 'Predicate' instance which always returns 'F' with
 -- the given value as F's meta-data.
 data Fail f t where
@@ -67,6 +73,9 @@ instance Predicate (Fail f t) a where
 
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail " ++ show a
+
+instance (Show f, Typeable f) => Description (Fail f t) where
+    describe (Fail a) = DConst "Fail" (Val (show a) (typeOf a))
 
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. It requires the
@@ -90,6 +99,9 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
 
 instance (Show a, Show b) => Show (a :|: b) where
     show (a :|: b) = "(" ++ show a ++ " | " ++ show b ++ ")"
+
+instance (Description a, Description b) => Description (a :|: b) where
+    describe (a :|: b) = DEither (describe a) (describe b)
 
 type a :+: b = Either a b
 
@@ -116,6 +128,9 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
 instance (Show a, Show b) => Show (a :||: b) where
     show (a :||: b) = "(" ++ show a ++ " || " ++ show b ++ ")"
 
+instance (Description a, Description b) => Description (a :||: b) where
+    describe (a :||: b) = DEither (describe a) (describe b)
+
 -- | Data-type used for tupling-up the results of ':&:'.
 data a :*: b = a :*: b deriving (Eq, Show)
 
@@ -135,6 +150,9 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
 
 instance (Show a, Show b) => Show (a :&: b) where
     show (a :&: b) = "(" ++ show a ++ " & " ++ show b ++ ")"
+
+instance (Description a, Description b) => Description (a :&: b) where
+    describe (a :&: b) = DAll (describe a) (describe b)
 
 -- | Evaluate the given predicate 'p' against the given value 'a'.
 eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)

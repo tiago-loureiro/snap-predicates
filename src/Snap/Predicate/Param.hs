@@ -1,20 +1,30 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+
 module Snap.Predicate.Param
-  ( Parameter (..)
-  , Param     (..)
-  , ParamOpt  (..)
-  , ParamDef  (..)
-  , HasParam  (..)
+  ( Parameter
+  , Param
+  , ParamOpt
+  , ParamDef
+  , HasParam
+
+  , parameter
+  , param
+  , paramOpt
+  , paramDef
+  , hasParam
   )
 where
 
 import Data.ByteString (ByteString)
 import Data.Map (member)
 import Data.Monoid
+import Data.Predicate.Internal
+import Data.Proxy
 import Data.Typeable
 import Data.Predicate
+import Data.Predicate.Descr
 import Snap.Core
 import Snap.Predicate.Error
 import Snap.Predicate.Internal
@@ -27,15 +37,26 @@ import Snap.Util.Readable
 -- returned instead, if nothing is provided, the error message will be used
 -- when construction the 400 status.
 data Parameter a = Parameter
-  { _pName    :: !ByteString                         -- ^ request parameter name
-  , _pRead    :: [ByteString] -> Either ByteString a -- ^ conversion function
-  , _pDefault :: !(Maybe a)                          -- ^ (optional) default value
-  }
+    { _pName    :: !ByteString
+    , _pRead    :: [ByteString] -> Either ByteString a
+    , _pDefault :: Maybe a
+    , _pProxy   :: Proxy a
+    }
+
+{-# INLINE parameter #-}
+parameter :: ByteString
+          -- ^ request parameter name
+          -> ([ByteString] -> Either ByteString a)
+          -- ^ conversion function
+          -> Maybe a
+          -- ^ optional default value
+          -> Parameter a
+parameter n r d = Parameter n r d Proxy
 
 instance Typeable a => Predicate (Parameter a) Request where
-    type FVal (Parameter a)     = Error
-    type TVal (Parameter a)     = a
-    apply (Parameter nme f def) =
+    type FVal (Parameter a)       = Error
+    type TVal (Parameter a)       = a
+    apply (Parameter nme f def _) =
         rqApply RqPred
           { _rqName      = nme
           , _rqRead      = f
@@ -45,21 +66,33 @@ instance Typeable a => Predicate (Parameter a) Request where
           , _rqError     = Just $ err 400 ("Missing parameter '" <> nme <> "'.")
           }
 
-instance Show (Parameter a) where
-    show p = "Parameter: " ++ show (_pName p)
+instance Typeable a => Show (Parameter a) where
+    show (Parameter n _ _ x) =
+        "Parameter: " ++ show n ++ " :: " ++ show (typeRepOf x)
+
+instance (Show a, Typeable a) => Description (Parameter a) where
+    describe (Parameter n _ d x) =
+        DParam (show n) (Typ (typeRepOf x)) (maybe Required (const Optional) d)
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
 -- Relies on 'Readable' type-class for the actual conversion.
-data Param a = Param ByteString
+data Param a = Param ByteString (Proxy a)
+
+{-# INLINE param #-}
+param :: ByteString -> Param a
+param n = Param n Proxy
 
 instance (Typeable a, Readable a) => Predicate (Param a) Request where
     type FVal (Param a) = Error
     type TVal (Param a) = a
-    apply (Param x)     = apply (Parameter x readValues Nothing)
+    apply (Param x _)   = apply (parameter x readValues Nothing)
 
-instance Show (Param a) where
-    show (Param x) = "Param: " ++ show x
+instance Typeable a => Show (Param a) where
+    show (Param n x) = "Param: " ++ show n ++ " :: " ++ show (typeRepOf x)
+
+instance Typeable a => Description (Param a) where
+    describe (Param n x) = DParam (show n) (Typ (typeRepOf x)) Required
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -67,24 +100,37 @@ instance Show (Param a) where
 -- Relies on 'Readable' type-class for the actual conversion.
 data ParamDef a = ParamDef ByteString a
 
+{-# INLINE paramDef #-}
+paramDef :: ByteString -> a -> ParamDef a
+paramDef = ParamDef
+
 instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
     type FVal (ParamDef a) = Error
     type TVal (ParamDef a) = a
-    apply (ParamDef x d)   = apply (Parameter x readValues (Just d))
+    apply (ParamDef x d)   = apply (parameter x readValues (Just d))
 
-instance Show a => Show (ParamDef a) where
-    show (ParamDef x d) = "ParamDef: " ++ show x ++ " [" ++ show d ++ "]"
+instance (Show a, Typeable a) => Show (ParamDef a) where
+    show (ParamDef x d) =
+        "ParamDef: " ++ show x ++ " [" ++ show d ++ "] :: " ++ show (typeOf d)
+
+instance (Show a, Typeable a) => Description (ParamDef a) where
+    describe (ParamDef n x) =
+        DParam (show n) (Def (show x) (typeOf x)) Optional
 
 -- | Predicate which returns the first request parameter which could be
 -- converted to the target type wrapped in a Maybe.
 -- If the parameter is not present, 'Nothing' will be returned.
 -- Relies on 'Readable' type-class for the actual conversion.
-data ParamOpt a = ParamOpt ByteString
+data ParamOpt a = ParamOpt ByteString (Proxy a)
+
+{-# INLINE paramOpt #-}
+paramOpt :: ByteString -> ParamOpt a
+paramOpt n = ParamOpt n Proxy
 
 instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
     type FVal (ParamOpt a) = Error
     type TVal (ParamOpt a) = Maybe a
-    apply (ParamOpt x)     =
+    apply (ParamOpt x _)   =
         rqApplyMaybe RqPred
           { _rqName      = x
           , _rqRead      = readValues
@@ -94,12 +140,19 @@ instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
           , _rqError     = Nothing
           }
 
-instance Show (ParamOpt a) where
-    show (ParamOpt x) = "ParamOpt: " ++ show x
+instance Typeable a => Show (ParamOpt a) where
+    show (ParamOpt n x) = "ParamOpt: " ++ show n ++ " :: " ++ show (typeRepOf x)
+
+instance Typeable a => Description (ParamOpt a) where
+    describe (ParamOpt n x) = DParam (show n) (Typ (typeRepOf x)) Optional
 
 -- | Predicate which is true if the request has a parameter with the
 -- given name.
 data HasParam = HasParam ByteString
+
+{-# INLINE hasParam #-}
+hasParam :: ByteString -> HasParam
+hasParam = HasParam
 
 instance Predicate HasParam Request where
     type FVal HasParam   = Error
@@ -111,3 +164,6 @@ instance Predicate HasParam Request where
 
 instance Show HasParam where
     show (HasParam x) = "HasParam: " ++ show x
+
+instance Description HasParam where
+    describe (HasParam n) = DParam (show n) (Val "()" (typeOf ())) Required

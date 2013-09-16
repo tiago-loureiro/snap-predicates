@@ -136,7 +136,7 @@ One way is to just evaluate them against a given request inside a snap handler, 
 someHandler :: 'Snap.Core.Snap' ()
 someHandler = do
     req <- 'Snap.Core.getRequest'
-    case 'Data.Predicate.eval' ('Snap.Predicate.Accept.Accept' 'Data.Predicate.:&:' 'Snap.Predicate.Param.Param' \"baz\") req of
+    case 'Data.Predicate.eval' ('Snap.Predicate.Accept.accept' 'Data.Predicate.:&:' 'Snap.Predicate.Param.param' \"baz\") req of
         'Data.Predicate.T' ((_ :: 'Snap.Predicate.MediaType.Media' \"text\" \"plain\") 'Data.Predicate.:*:' bazValue) -> ...
         'Data.Predicate.F' (Just ('Snap.Predicate.Error' st msg))                      -> ...
         'Data.Predicate.F' Nothing                                    -> ...
@@ -148,11 +148,11 @@ However another possibility is to augment route definitions with the
 @
 sitemap :: 'Snap.Routes.Routes' Snap ()
 sitemap = do
-    'Snap.Routes.get'  \"\/a\" handlerA $ 'Snap.Predicate.Accept.Accept' 'Data.Predicate.:&:' ('Snap.Predicate.Param' \"name\" 'Data.Predicate.:|:' 'Snap.Predicate.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicate.Param' \"foo\"
-    'Snap.Routes.get'  \"\/b\" handlerB $ 'Snap.Predicate.Accept.Accept' 'Data.Predicate.:&:' ('Snap.Predicate.Param' \"name\" 'Data.Predicate.:||:' 'Snap.Predicate.Param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicate.Param' \"foo\"
+    'Snap.Routes.get'  \"\/a\" handlerA $ 'Snap.Predicate.Accept.accept' 'Data.Predicate.:&:' ('Snap.Predicate.Param.param' \"name\" 'Data.Predicate.:|:' 'Snap.Predicate.Param.param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicate.Param.param' \"foo\"
+    'Snap.Routes.get'  \"\/b\" handlerB $ 'Snap.Predicate.Accept.accept' 'Data.Predicate.:&:' ('Snap.Predicate.Param.param' \"name\" 'Data.Predicate.:||:' 'Snap.Predicate.Param.param' \"nick\") 'Data.Predicate.:&:' 'Snap.Predicate.Param.param' \"foo\"
     'Snap.Routes.get'  \"\/c\" handlerC $ 'Data.Predicate.Fail' ('Snap.Predicate.Error' 410 (Just \"Gone.\"))
-    'Snap.Routes.post' \"\/d\" handlerD $ 'Snap.Predicate.Accept.Accept'
-    'Snap.Routes.post' \"\/e\" handlerE $ 'Snap.Predicate.Accept.Accept'
+    'Snap.Routes.post' \"\/d\" handlerD $ 'Snap.Predicate.Accept.accept'
+    'Snap.Routes.post' \"\/e\" handlerE $ 'Snap.Predicate.Accept.accept'
 @
 
 The handlers then encode their pre-conditions in their type-signature:
