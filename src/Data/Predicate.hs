@@ -59,7 +59,7 @@ instance Show t => Show (Const f t) where
     show (Const a) = "Const: " ++ show a
 
 instance (Show t, Typeable t) => Description (Const f t) where
-    describe (Const a) = DConst "Const" (show a) (TLabel . show $ typeOf a)
+    describe (Const a) = DConst "Const" (show a) (TLabel . show $ typeOf a) []
 
 -- | A 'Predicate' instance which always returns 'F' with
 -- the given value as F's meta-data.
@@ -75,7 +75,7 @@ instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail: " ++ show a
 
 instance (Show f, Typeable f) => Description (Fail f t) where
-    describe (Fail a) = DConst "Fail" (show a) (TLabel . show $ typeOf a)
+    describe (Fail a) = DConst "Fail" (show a) (TLabel . show $ typeOf a) []
 
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. It requires the
@@ -154,7 +154,7 @@ instance (Show a, Show b) => Show (a :&: b) where
 instance (Description a, Description b) => Description (a :&: b) where
     describe (a :&: b) = DAll (describe a) (describe b)
 
--- | A 'Predicate' instance which evalues only it's left-hand side.
+-- | A 'Predicate' instance which evaluates only it's left-hand side.
 data a :< b = a :< b
 
 instance (Predicate a c, Predicate b c) => Predicate (a :< b) c
@@ -169,7 +169,7 @@ instance (Show a, Show b) => Show (a :< b) where
 instance (Description a, Description b) => Description (a :< b) where
     describe (a :< b) = DAll (describe a) (describe b)
 
--- | A 'Predicate' instance which evalues only it's right-hand side.
+-- | A 'Predicate' instance which evaluates only it's right-hand side.
 data a :> b = a :> b
 
 instance (Predicate a c, Predicate b c) => Predicate (a :> b) c

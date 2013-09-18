@@ -29,10 +29,10 @@ data Obligation
     deriving Show
 
 data Descr
-    = DConst  !Name   !String !Type
-    | DSymbol !Name   !String !Obligation
-    | DValue  !Name   !Type   !Obligation
-    | DType   !Name   !Type
+    = DConst  !Name   !String !Type       [Tag]
+    | DSymbol !Name   !String !Obligation [Tag]
+    | DValue  !Name   !Type   !Obligation [Tag]
+    | DType   !Name   !Type               [Tag]
     | DDoc    !String
     | DLabel  !String !Descr
     | DEither !Descr  !Descr
