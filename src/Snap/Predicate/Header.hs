@@ -72,7 +72,7 @@ instance Show (Header a) where
 
 instance (Show a, Typeable a) => Description (Header a) where
     describe (Header n _ d x) =
-        DHeader (show n) (Typ (typeRepOf x)) (maybe Required (const Optional) d)
+        DValue (show n) (TLabel . show $ typeRepOf x) (maybe Required (Default . show) d)
 
 -- | Specialisation of 'Header' which returns the first request
 -- header value which could be converted to the target type.
@@ -92,7 +92,7 @@ instance Typeable a => Show (Hdr a) where
     show (Hdr n x) = "Hdr: " ++ show n ++ " :: " ++ show (typeRepOf x)
 
 instance Typeable a => Description (Hdr a) where
-    describe (Hdr n x) = DHeader (show n) (Typ (typeRepOf x)) Required
+    describe (Hdr n x) = DValue (show n) (TLabel . show $ typeRepOf x) Required
 
 -- | Specialisation of 'Header' which returns the first request
 -- header value which could be converted to the target type.
@@ -115,7 +115,7 @@ instance (Show a, Typeable a) => Show (HdrDef a) where
 
 instance (Show a, Typeable a) => Description (HdrDef a) where
     describe (HdrDef n x) =
-        DHeader (show n) (Def (show x) (typeOf x)) Optional
+        DValue (show n) (TLabel . show $ typeOf x) (Default (show x))
 
 -- | Predicate which returns the first request header which could be
 -- converted to the target type wrapped in a Maybe.
@@ -144,7 +144,7 @@ instance Typeable a => Show (HdrOpt a) where
     show (HdrOpt n x) = "HdrOpt: " ++ show n ++ " :: " ++ show (typeRepOf x)
 
 instance Typeable a => Description (HdrOpt a) where
-    describe (HdrOpt n x) = DHeader (show n) (Typ (typeRepOf x)) Optional
+    describe (HdrOpt n x) = DValue (show n) (TLabel . show $ typeRepOf x) Optional
 
 -- | Predicate which is true if the request has a header with the
 -- given name.
@@ -166,4 +166,4 @@ instance Show HasHdr where
     show (HasHdr x) = "HasHdr: " ++ show x
 
 instance Description HasHdr where
-    describe (HasHdr n) = DHeader (show n) (Val "()" (typeOf ())) Required
+    describe (HasHdr n) = DValue (show n) (TPrim PUnit) Required

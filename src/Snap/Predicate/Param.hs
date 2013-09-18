@@ -72,7 +72,7 @@ instance Typeable a => Show (Parameter a) where
 
 instance (Show a, Typeable a) => Description (Parameter a) where
     describe (Parameter n _ d x) =
-        DParam (show n) (Typ (typeRepOf x)) (maybe Required (const Optional) d)
+        DValue (show n) (TLabel . show $ typeRepOf x) (maybe Required (Default . show) d)
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -92,7 +92,7 @@ instance Typeable a => Show (Param a) where
     show (Param n x) = "Param: " ++ show n ++ " :: " ++ show (typeRepOf x)
 
 instance Typeable a => Description (Param a) where
-    describe (Param n x) = DParam (show n) (Typ (typeRepOf x)) Required
+    describe (Param n x) = DValue (show n) (TLabel . show $ typeRepOf x) Required
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -115,7 +115,7 @@ instance (Show a, Typeable a) => Show (ParamDef a) where
 
 instance (Show a, Typeable a) => Description (ParamDef a) where
     describe (ParamDef n x) =
-        DParam (show n) (Def (show x) (typeOf x)) Optional
+        DValue (show n)  (TLabel . show $ typeOf x) (Default (show x))
 
 -- | Predicate which returns the first request parameter which could be
 -- converted to the target type wrapped in a Maybe.
@@ -144,7 +144,7 @@ instance Typeable a => Show (ParamOpt a) where
     show (ParamOpt n x) = "ParamOpt: " ++ show n ++ " :: " ++ show (typeRepOf x)
 
 instance Typeable a => Description (ParamOpt a) where
-    describe (ParamOpt n x) = DParam (show n) (Typ (typeRepOf x)) Optional
+    describe (ParamOpt n x) = DValue (show n) (TLabel . show $ typeRepOf x) Optional
 
 -- | Predicate which is true if the request has a parameter with the
 -- given name.
@@ -166,4 +166,4 @@ instance Show HasParam where
     show (HasParam x) = "HasParam: " ++ show x
 
 instance Description HasParam where
-    describe (HasParam n) = DParam (show n) (Val "()" (typeOf ())) Required
+    describe (HasParam n) = DValue (show n) (TPrim PUnit) Required

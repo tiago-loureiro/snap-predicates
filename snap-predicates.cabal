@@ -1,5 +1,5 @@
 name:                snap-predicates
-version:             0.3.1
+version:             0.4
 synopsis:            Declarative routing for Snap.
 license:             OtherLicense
 license-file:        mpl-2.0.txt
@@ -34,6 +34,7 @@ library
       , Data.Predicate.Descr
       , Snap.Predicate
       , Snap.Predicate.Accept
+      , Snap.Predicate.Doc
       , Snap.Predicate.Error
       , Snap.Predicate.Param
       , Snap.Predicate.Header

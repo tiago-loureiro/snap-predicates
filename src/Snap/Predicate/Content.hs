@@ -60,7 +60,7 @@ instance (SingI t, SingI s) => Show (ContentType t s) where
     show c = unpack $ "ContentType: " <> type1 c <> "/" <> type2 c
 
 instance (SingI t, SingI s) => Description (ContentType t s) where
-    describe a = DHeader "Content-Type" (Sym (show $ type1 a <> "/" <> type2 a)) Required
+    describe a = DSymbol "Content-Type" (show $ type1 a <> "/" <> type2 a) Required
 
 findContentType :: (SingI t, SingI s) => ContentType t s -> [A.MediaType] -> [Media t s]
 findContentType c = mapMaybe (\m -> do

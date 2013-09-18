@@ -56,10 +56,10 @@ instance Predicate (Const f t) a where
     apply (Const a) _     = return (T 0 a)
 
 instance Show t => Show (Const f t) where
-    show (Const a) = "Const " ++ show a
+    show (Const a) = "Const: " ++ show a
 
 instance (Show t, Typeable t) => Description (Const f t) where
-    describe (Const a) = DConst "Const" (Val (show a) (typeOf a))
+    describe (Const a) = DConst "Const" (show a) (TLabel . show $ typeOf a)
 
 -- | A 'Predicate' instance which always returns 'F' with
 -- the given value as F's meta-data.
@@ -72,10 +72,10 @@ instance Predicate (Fail f t) a where
     apply (Fail a) _     = return (F a)
 
 instance Show f => Show (Fail f t) where
-    show (Fail a) = "Fail " ++ show a
+    show (Fail a) = "Fail: " ++ show a
 
 instance (Show f, Typeable f) => Description (Fail f t) where
-    describe (Fail a) = DConst "Fail" (Val (show a) (typeOf a))
+    describe (Fail a) = DConst "Fail" (show a) (TLabel . show $ typeOf a)
 
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. It requires the
@@ -153,6 +153,36 @@ instance (Show a, Show b) => Show (a :&: b) where
 
 instance (Description a, Description b) => Description (a :&: b) where
     describe (a :&: b) = DAll (describe a) (describe b)
+
+-- | A 'Predicate' instance which evalues only it's left-hand side.
+data a :< b = a :< b
+
+instance (Predicate a c, Predicate b c) => Predicate (a :< b) c
+  where
+    type FVal (a :< b) = FVal a
+    type TVal (a :< b) = TVal a
+    apply (a :< _) r   = apply a r
+
+instance (Show a, Show b) => Show (a :< b) where
+    show (a :< b) = "(" ++ show a ++ " < " ++ show b ++ ")"
+
+instance (Description a, Description b) => Description (a :< b) where
+    describe (a :< b) = DAll (describe a) (describe b)
+
+-- | A 'Predicate' instance which evalues only it's right-hand side.
+data a :> b = a :> b
+
+instance (Predicate a c, Predicate b c) => Predicate (a :> b) c
+  where
+    type FVal (a :> b) = FVal b
+    type TVal (a :> b) = TVal b
+    apply (_ :> b) r   = apply b r
+
+instance (Show a, Show b) => Show (a :> b) where
+    show (a :> b) = "(" ++ show a ++ " > " ++ show b ++ ")"
+
+instance (Description a, Description b) => Description (a :> b) where
+    describe (a :> b) = DAll (describe a) (describe b)
 
 -- | Evaluate the given predicate 'p' against the given value 'a'.
 eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)
