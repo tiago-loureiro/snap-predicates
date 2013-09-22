@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 module Snap.Predicate.Internal
@@ -5,7 +6,6 @@ module Snap.Predicate.Internal
   , headers
   , params
   , cookies
-  , safeHead
   , readValues
   , rqApply
   , rqApplyMaybe
@@ -26,8 +26,9 @@ import Snap.Core hiding (headers)
 import Snap.Predicate.Error
 import Snap.Util.Readable
 
-import qualified Data.Predicate.Env as E
-import qualified Data.Map.Strict    as M
+import qualified Data.ByteString.Char8 as C
+import qualified Data.Predicate.Env    as E
+import qualified Data.Map.Strict       as M
 
 headers :: ByteString -> Request -> [ByteString]
 headers name = fromMaybe [] . getHeaders (mk name)
@@ -38,15 +39,24 @@ params name = fromMaybe [] . M.lookup name . rqParams
 cookies :: ByteString -> Request -> [Cookie]
 cookies name rq = filter ((name ==) . cookieName) (rqCookies rq)
 
-safeHead :: [a] -> Maybe a
-safeHead []    = Nothing
-safeHead (h:_) = Just h
+-- | Specialized Either monad for use with 'fromBS' within 'readValues'
+-- that implements 'fail' with 'Left' in order to preserve error
+-- messages produced by 'Readable' instances.
+newtype EitherS a = EitherS { unEitherS :: Either ByteString a }
+instance Monad EitherS where
+    (EitherS e) >>= f = EitherS $ e >>= unEitherS . f
+    return = EitherS . return
+    fail   = EitherS . Left . C.pack
 
 readValues :: Readable a => [ByteString] -> Either ByteString a
-readValues vs =
-    case listToMaybe . catMaybes $ map fromBS vs of
-        Nothing -> Left "no read"
-        Just x  -> Right x
+readValues vs = catEitherS $ map fromBS vs
+  where
+    catEitherS [] = Left "no read"
+    catEitherS (EitherS(e):es) = e `orElse` catEitherS es
+      where
+        orElse (Right x) _         = Right x
+        orElse _         (Right y) = Right y
+        orElse (Left  x) (Left  _) = Left  x
 
 data RqPred a = RqPred
   { _rqName      :: !ByteString
