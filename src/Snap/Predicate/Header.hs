@@ -18,6 +18,7 @@ module Snap.Predicate.Header
 where
 
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (unpack)
 import Data.CaseInsensitive (mk)
 import Data.Maybe
 import Data.Monoid
@@ -25,7 +26,7 @@ import Data.Predicate.Internal
 import Data.Proxy
 import Data.Typeable
 import Data.Predicate
-import Data.Predicate.Descr
+import Data.Predicate.Descr hiding (tags)
 import Snap.Core hiding (headers)
 import Snap.Predicate.Error
 import Snap.Predicate.Internal
@@ -72,7 +73,7 @@ instance Show (Header a) where
 
 instance (Show a, Typeable a) => Description (Header a) where
     describe (Header n _ d x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                (maybe Required (Default . show) d)
                tags
@@ -96,7 +97,7 @@ instance Typeable a => Show (Hdr a) where
 
 instance Typeable a => Description (Hdr a) where
     describe (Hdr n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                Required
                tags
@@ -122,7 +123,7 @@ instance (Show a, Typeable a) => Show (HdrDef a) where
 
 instance (Show a, Typeable a) => Description (HdrDef a) where
     describe (HdrDef n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeOf x)
                (Default (show x))
                tags
@@ -155,7 +156,7 @@ instance Typeable a => Show (HdrOpt a) where
 
 instance Typeable a => Description (HdrOpt a) where
     describe (HdrOpt n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                Optional
                tags
@@ -180,7 +181,7 @@ instance Show HasHdr where
     show (HasHdr x) = "HasHdr: " ++ show x
 
 instance Description HasHdr where
-    describe (HasHdr n) = DValue (show n) (TPrim PUnit) Required tags
+    describe (HasHdr n) = DValue (unpack n) (TPrim PUnit) Required tags
 
 tags :: [Tag]
 tags = ["Header"]

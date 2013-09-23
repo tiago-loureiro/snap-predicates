@@ -32,6 +32,7 @@ library
         Data.Predicate
       , Data.Predicate.Env
       , Data.Predicate.Descr
+      , Data.Predicate.Typeof
       , Snap.Predicate
       , Snap.Predicate.Accept
       , Snap.Predicate.Doc

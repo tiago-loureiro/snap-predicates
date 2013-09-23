@@ -18,13 +18,14 @@ module Snap.Predicate.Param
 where
 
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (unpack)
 import Data.Map (member)
 import Data.Monoid
 import Data.Predicate.Internal
 import Data.Proxy
 import Data.Typeable
 import Data.Predicate
-import Data.Predicate.Descr
+import Data.Predicate.Descr hiding (tags)
 import Snap.Core
 import Snap.Predicate.Error
 import Snap.Predicate.Internal
@@ -72,7 +73,7 @@ instance Typeable a => Show (Parameter a) where
 
 instance (Show a, Typeable a) => Description (Parameter a) where
     describe (Parameter n _ d x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                (maybe Required (Default . show) d)
                tags
@@ -96,7 +97,7 @@ instance Typeable a => Show (Param a) where
 
 instance Typeable a => Description (Param a) where
     describe (Param n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                Required
                tags
@@ -122,7 +123,7 @@ instance (Show a, Typeable a) => Show (ParamDef a) where
 
 instance (Show a, Typeable a) => Description (ParamDef a) where
     describe (ParamDef n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeOf x)
                (Default (show x))
                tags
@@ -155,7 +156,7 @@ instance Typeable a => Show (ParamOpt a) where
 
 instance Typeable a => Description (ParamOpt a) where
     describe (ParamOpt n x) =
-        DValue (show n)
+        DValue (unpack n)
                (TLabel . show $ typeRepOf x)
                Optional
                tags
@@ -180,7 +181,7 @@ instance Show HasParam where
     show (HasParam x) = "HasParam: " ++ show x
 
 instance Description HasParam where
-    describe (HasParam n) = DValue (show n) (TPrim PUnit) Required tags
+    describe (HasParam n) = DValue (unpack n) (TPrim PUnit) Required tags
 
 tags :: [Tag]
 tags = ["Param"]
