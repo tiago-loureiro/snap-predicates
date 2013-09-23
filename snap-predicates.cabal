@@ -46,8 +46,7 @@ library
       , Snap.Route
 
     other-modules:
-        Data.Predicate.Internal
-      , Snap.Predicate.Internal
+        Snap.Predicate.Internal
       , Snap.Predicate.MediaType.Internal
       , Snap.Predicate.Parser.Accept
       , Snap.Predicate.Parser.Shared

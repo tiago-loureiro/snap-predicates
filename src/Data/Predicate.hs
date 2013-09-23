@@ -10,8 +10,8 @@ import Prelude hiding (and, or)
 import Control.Applicative hiding (Const)
 import Control.Monad.State.Strict
 import Data.Predicate.Descr
+import Data.Predicate.Typeof
 import Data.Predicate.Env (Env)
-import Data.Typeable
 import qualified Data.Predicate.Env as E
 
 -- | 'Delta' is a measure of distance. It is (optionally)
@@ -58,8 +58,8 @@ instance Predicate (Const f t) a where
 instance Show t => Show (Const f t) where
     show (Const a) = "Const: " ++ show a
 
-instance (Show t, Typeable t) => Description (Const f t) where
-    describe (Const a) = DConst "Const" (show a) (TLabel . show $ typeOf a) []
+instance (Show t, Typeof t) => Description (Const f t) where
+    describe (Const a) = DConst "Const" (show a) (typeof a) []
 
 -- | A 'Predicate' instance which always returns 'F' with
 -- the given value as F's meta-data.
@@ -74,8 +74,8 @@ instance Predicate (Fail f t) a where
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail: " ++ show a
 
-instance (Show f, Typeable f) => Description (Fail f t) where
-    describe (Fail a) = DConst "Fail" (show a) (TLabel . show $ typeOf a) []
+instance (Show f, Typeof f) => Description (Fail f t) where
+    describe (Fail a) = DConst "Fail" (show a) (typeof a) []
 
 -- | A 'Predicate' instance corresponding to the logical
 -- OR connective of two 'Predicate's. It requires the

@@ -8,7 +8,13 @@ module Data.Predicate.Typeof where
 
 import Data.Monoid
 import Data.Predicate.Descr
+import Data.Proxy
 import GHC.Generics
+
+import Data.Word (Word)
+import Data.Text (Text)
+import qualified Data.ByteString      as B
+import qualified Data.ByteString.Lazy as L
 
 class Typeof a where
     typeof :: a -> Type
@@ -50,19 +56,26 @@ instance GTypeof (f :+: g) where
     gtypeof _ = TVoid
 
 instance Typeof Int where typeof _ = TPrim PInt
+instance Typeof Integer where typeof _ = TPrim PInteger
 instance Typeof Bool where typeof _ = TPrim PBool
 instance Typeof Char where typeof _ = TPrim PChar
 instance Typeof Float where typeof _ = TPrim PFloat
 instance Typeof Double where typeof _ = TPrim PDouble
+instance Typeof () where typeof _ = TPrim PUnit
+instance Typeof Text where typeof _ = Type "Text" TVoid
+instance Typeof B.ByteString where typeof _ = Type "ByteString" TVoid
+instance Typeof L.ByteString where typeof _ = Type "ByteString" TVoid
+instance Typeof Word where typeof _ = Type "Word" TVoid
+
+instance (Typeof a) => Typeof (Proxy a) where
+    typeof _ = typeof (undefined :: a)
 
 instance (Typeof a) => Typeof [a] where
     typeof _ = TSeq (typeof (undefined :: a))
 
 instance (Typeof a) => Typeof (Maybe a) where
-    typeof _ = Type "Maybe" (typeof (undefined :: a))
+    typeof _ = Type "Maybe" (TParams [typeof (undefined :: a)])
 
 instance (Typeof a, Typeof b) => Typeof (Either a b) where
-    typeof _ = Type "Either"
-        (TSum [("Left", typeof (undefined :: a))
-              ,("Right", typeof (undefined :: b))
-              ])
+    typeof _ = Type "Either" $
+        TParams [typeof (undefined :: a), typeof (undefined :: b)]

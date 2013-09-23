@@ -21,7 +21,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (unpack)
 import Data.Map (member)
 import Data.Monoid
-import Data.Predicate.Internal
+import Data.Predicate.Typeof
 import Data.Proxy
 import Data.Typeable
 import Data.Predicate
@@ -67,16 +67,13 @@ instance Typeable a => Predicate (Parameter a) Request where
           , _rqError     = Just $ err 400 ("Missing parameter '" <> nme <> "'.")
           }
 
-instance Typeable a => Show (Parameter a) where
+instance (Typeof a) => Show (Parameter a) where
     show (Parameter n _ _ x) =
-        "Parameter: " ++ show n ++ " :: " ++ show (typeRepOf x)
+        "Parameter: " ++ show n ++ " :: " ++ show (typeof x)
 
-instance (Show a, Typeable a) => Description (Parameter a) where
+instance (Show a, Typeof a) => Description (Parameter a) where
     describe (Parameter n _ d x) =
-        DValue (unpack n)
-               (TLabel . show $ typeRepOf x)
-               (maybe Required (Default . show) d)
-               tags
+        DValue (unpack n) (typeof x) (maybe Required (Default . show) d) tags
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -92,15 +89,11 @@ instance (Typeable a, Readable a) => Predicate (Param a) Request where
     type TVal (Param a) = a
     apply (Param x _)   = apply (parameter x readValues Nothing)
 
-instance Typeable a => Show (Param a) where
-    show (Param n x) = "Param: " ++ show n ++ " :: " ++ show (typeRepOf x)
+instance (Typeof a) => Show (Param a) where
+    show (Param n x) = "Param: " ++ show n ++ " :: " ++ show (typeof x)
 
-instance Typeable a => Description (Param a) where
-    describe (Param n x) =
-        DValue (unpack n)
-               (TLabel . show $ typeRepOf x)
-               Required
-               tags
+instance (Typeof a) => Description (Param a) where
+    describe (Param n x) = DValue (unpack n) (typeof x) Required tags
 
 -- | Specialisation of 'Parameter' which returns the first request
 -- parameter which could be converted to the target type.
@@ -117,16 +110,12 @@ instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
     type TVal (ParamDef a) = a
     apply (ParamDef x d)   = apply (parameter x readValues (Just d))
 
-instance (Show a, Typeable a) => Show (ParamDef a) where
+instance (Show a, Typeof a) => Show (ParamDef a) where
     show (ParamDef x d) =
-        "ParamDef: " ++ show x ++ " [" ++ show d ++ "] :: " ++ show (typeOf d)
+        "ParamDef: " ++ show x ++ " [" ++ show d ++ "] :: " ++ show (typeof d)
 
-instance (Show a, Typeable a) => Description (ParamDef a) where
-    describe (ParamDef n x) =
-        DValue (unpack n)
-               (TLabel . show $ typeOf x)
-               (Default (show x))
-               tags
+instance (Show a, Typeof a) => Description (ParamDef a) where
+    describe (ParamDef n x) = DValue (unpack n) (typeof x) (Default (show x)) tags
 
 -- | Predicate which returns the first request parameter which could be
 -- converted to the target type wrapped in a Maybe.
@@ -151,15 +140,11 @@ instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
           , _rqError     = Nothing
           }
 
-instance Typeable a => Show (ParamOpt a) where
-    show (ParamOpt n x) = "ParamOpt: " ++ show n ++ " :: " ++ show (typeRepOf x)
+instance (Typeof a) => Show (ParamOpt a) where
+    show (ParamOpt n x) = "ParamOpt: " ++ show n ++ " :: " ++ show (typeof x)
 
-instance Typeable a => Description (ParamOpt a) where
-    describe (ParamOpt n x) =
-        DValue (unpack n)
-               (TLabel . show $ typeRepOf x)
-               Optional
-               tags
+instance (Typeof a) => Description (ParamOpt a) where
+    describe (ParamOpt n x) = DValue (unpack n) (typeof x) Optional tags
 
 -- | Predicate which is true if the request has a parameter with the
 -- given name.

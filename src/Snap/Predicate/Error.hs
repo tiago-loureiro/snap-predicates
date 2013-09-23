@@ -4,15 +4,18 @@
 module Snap.Predicate.Error where
 
 import Data.ByteString (ByteString)
+import Data.Predicate.Typeof
 import Data.Typeable
 import Data.Word
 import GHC.Generics
 
 -- | The error type used as 'F' meta-data in all snap predicates.
 data Error = Error
-  { status  :: !Word               -- ^ (HTTP) status code
-  , message :: !(Maybe ByteString) -- ^ optional status message
-  } deriving (Eq, Show, Generic, Typeable)
+    { status  :: !Word               -- ^ (HTTP) status code
+    , message :: !(Maybe ByteString) -- ^ optional status message
+    } deriving (Eq, Show, Generic, Typeable)
+
+instance Typeof Error
 
 -- | Convenience function to construct 'Error' values from
 -- status code and status message.
