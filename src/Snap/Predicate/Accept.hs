@@ -63,7 +63,7 @@ instance (SingI t, SingI s) => Show (Accept t s) where
     show a = unpack $ "Accept: " <> type1 a <> "/" <> type2 a
 
 instance (SingI t, SingI s) => Description (Accept t s) where
-    describe a = DSymbol "Accept" (show $ type1 a <> "/" <> type2 a) Required ["Header"]
+    describe a = DSymbol "Accept" (show $ type1 a <> "/" <> type2 a) Optional ["Header"]
 
 findMediaType :: (SingI t, SingI s) => Accept t s -> [A.MediaType] -> [Media t s]
 findMediaType a = mapMaybe (\m -> do

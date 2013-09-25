@@ -1,16 +1,19 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Data.Predicate.Descr where
 
 type Name = String
 type Tag  = String
 
 data Type
-    = Type    Name Type
-    | TVoid
-    | TPrim   Prim
-    | TProd   [Type]
-    | TRec    [(Name, Type)]
-    | TParams [Type]
-    | TSeq    Type
+    = TPrim Prim
+    | TProd [Type]
+    | TRecd [(Name, Type)]
+    | TSum  [Type]
+    | TName Name
+    | TColl Type
+    | TCon  Name Type
+    | Type  Name Type
     deriving (Eq, Show)
 
 data Prim
@@ -44,9 +47,9 @@ class Description a where
     describe :: a -> Descr
 
 foldD :: (a -> Descr -> a) -> a -> Descr -> a
-foldD f z (DAll   a b)  = foldD f (foldD f z a) b
-foldD f z (DEither a b) = foldD f (foldD f z a) b
-foldD f z d             = f z d
+foldD f !z (DAll    !a !b) = foldD f (foldD f z a) b
+foldD f !z (DEither !a !b) = foldD f (foldD f z a) b
+foldD f !z !d              = f z d
 
 mapD :: (Descr -> a) -> Descr -> [a]
 mapD f = foldD (\a d -> f d : a) []
@@ -63,6 +66,7 @@ name _                  = Nothing
 obligation :: Descr -> Maybe Obligation
 obligation (DSymbol _ _ o _) = Just o
 obligation (DValue  _ _ o _) = Just o
+obligation (DType   _ o _)   = Just o
 obligation _                 = Nothing
 
 typ :: Descr -> Maybe Type
@@ -79,3 +83,10 @@ tags (DValue  _ _ _ t) = t
 tags (DType   _ _ t)   = t
 tags (DLabel _ d)      = tags d
 tags _                 = []
+
+toList :: Descr -> [Descr]
+toList d = go d []
+  where
+    go (DAll    !a !b) !acc = go a acc ++ go b acc
+    go (DEither !a !b) !acc = go a acc ++ go b acc
+    go !descr          !acc = descr : acc
