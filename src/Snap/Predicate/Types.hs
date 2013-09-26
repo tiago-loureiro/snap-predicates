@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Snap.Predicate.Types ( CSV, list ) where
 
 import Control.Applicative
@@ -7,7 +9,9 @@ import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Maybe
 import Data.Monoid
+import Data.Predicate.Typeof
 import Data.Typeable
+import GHC.Generics
 import Snap.Util.Readable
 import qualified Data.ByteString.Char8 as C
 
@@ -17,6 +21,7 @@ newtype CSV a = CSV { list :: [a] } deriving
   , Read
   , Show
   , Functor
+  , Generic
   , Monad
   , MonadPlus
   , Applicative
@@ -34,6 +39,8 @@ instance Readable a => Readable (CSV a) where
           in if length cs /= length xs
                  then fail "no parse"
                  else return (CSV xs)
+
+instance (Typeof a) => Typeof (CSV a)
 
 trim :: ByteString -> ByteString
 trim = fst . C.spanEnd (== ' ') . C.dropWhile (== ' ')
