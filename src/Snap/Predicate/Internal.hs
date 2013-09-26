@@ -1,22 +1,23 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
-module Snap.Predicate.Internal
-  ( RqPred (..)
-  , headers
-  , params
-  , cookies
-  , readValues
-  , rqApply
-  , rqApplyMaybe
-  , key
-  )
-where
 
+module Snap.Predicate.Internal
+    ( RqPred (..)
+    , headers
+    , params
+    , cookies
+    , readValues
+    , rqApply
+    , rqApplyMaybe
+    , key
+    ) where
+
+import Control.Monad
 import Control.Monad.State.Class
 import Data.ByteString (ByteString)
 import Data.CaseInsensitive (mk)
 import Data.Maybe
+import Data.List (foldl')
 import Data.Monoid
 import Data.Predicate
 import Data.Predicate.Env (Env)
@@ -39,24 +40,22 @@ params name = fromMaybe [] . M.lookup name . rqParams
 cookies :: ByteString -> Request -> [Cookie]
 cookies name rq = filter ((name ==) . cookieName) (rqCookies rq)
 
--- | Specialized Either monad for use with 'fromBS' within 'readValues'
--- that implements 'fail' with 'Left' in order to preserve error
--- messages produced by 'Readable' instances.
-newtype EitherS a = EitherS { unEitherS :: Either ByteString a }
-instance Monad EitherS where
-    (EitherS e) >>= f = EitherS $ e >>= unEitherS . f
-    return = EitherS . return
-    fail   = EitherS . Left . C.pack
+newtype Result a = Result
+    { toEither :: Either ByteString a }
+
+instance Functor Result where
+    fmap = liftM
+
+instance Monad Result where
+    return  = Result . Right
+    fail    = Result . Left . C.pack
+    r >>= k = Result $ toEither r >>= toEither . k
 
 readValues :: Readable a => [ByteString] -> Either ByteString a
-readValues vs = catEitherS $ map fromBS vs
+readValues = foldl' orElse (Left "no read") . map fromBS
   where
-    catEitherS [] = Left "no read"
-    catEitherS (EitherS(e):es) = e `orElse` catEitherS es
-      where
-        orElse (Right x) _         = Right x
-        orElse _         (Right y) = Right y
-        orElse (Left  x) (Left  _) = Left  x
+    orElse r@(Right _) _          = r
+    orElse _           (Result e) = e
 
 data RqPred a = RqPred
   { _rqName      :: !ByteString
