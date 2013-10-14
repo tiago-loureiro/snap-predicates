@@ -39,7 +39,6 @@ import Data.Function
 import Data.List hiding (head, delete)
 import Data.Predicate
 import Data.Predicate.Descr
-import Data.Predicate.Env (Env)
 import Snap.Core
 import Snap.Predicate
 
@@ -47,7 +46,6 @@ import qualified Data.ByteString       as S
 import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy  as Lazy
 import qualified Data.List             as L
-import qualified Data.Predicate.Env    as E
 
 data Pack m where
     Pack :: (Description p, Show p, Predicate p Request, FVal p ~ Error)
@@ -217,18 +215,17 @@ select f g = do
     evalAll :: MonadSnap m => [Route m] -> m ()
     evalAll rs = do
         req <- getRequest
-        let (n, y) = partitionEithers . snd $ foldl' (evalSingle req) (E.empty, []) rs
+        let (n, y) = partitionEithers $ foldl' (evalSingle req) [] rs
         if null y
             then respond f (L.head n)
             else closest y
 
-    evalSingle :: MonadSnap m => Request -> (Env, [Either Error (Handler m)]) -> Route m -> (Env, [Either Error (Handler m)])
-    evalSingle rq (e, rs) r =
+    evalSingle :: MonadSnap m => Request -> [Either Error (Handler m)] -> Route m -> [Either Error (Handler m)]
+    evalSingle rq rs r =
         case _pred r of
-            Pack p h ->
-                case runState (apply p rq) e of
-                    (F   m, e') -> (e', Left m : rs)
-                    (T d v, e') -> (e', Right (Handler d (h v)) : rs)
+            Pack p h -> case apply p rq of
+                F   m -> Left m : rs
+                T d v -> Right (Handler d (h v)) : rs
 
     closest :: MonadSnap m => [Handler m] -> m ()
     closest = foldl' (<|>) pass

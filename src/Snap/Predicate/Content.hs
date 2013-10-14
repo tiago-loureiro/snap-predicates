@@ -23,7 +23,6 @@ import Snap.Predicate.Error
 import Snap.Predicate.MediaType
 import Snap.Predicate.MediaType.Internal
 
-import qualified Data.Predicate.Env           as E
 import qualified Snap.Predicate.Parser.Accept as A
 
 -- | A 'Predicate' against the 'Request's \"Content-Type\" header.
@@ -48,11 +47,10 @@ type2 m = withSing (f m)
 instance (SingI t, SingI s) => Predicate (ContentType t s) Request where
     type FVal (ContentType t s) = Error
     type TVal (ContentType t s) = Media t s
-    apply c r = do
-        mtypes <- E.lookup "content-type" >>= maybe (readMediaTypes "content-type" r) return
+    apply c r = let mtypes = readMediaTypes "content-type" r in
         case findContentType c mtypes of
-               m:_ -> return (T (1.0 - mediaQuality m) m)
-               []  -> return (F (err 415 msg))
+            m:_ -> T (1.0 - mediaQuality m) m
+            []  -> F (err 415 msg)
       where
         msg = "Expected 'Content-Type: " <> type1 c <> "/" <> type2 c <> "'."
 

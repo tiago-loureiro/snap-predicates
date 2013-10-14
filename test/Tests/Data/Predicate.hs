@@ -20,28 +20,28 @@ tests = testGroup "Data.Predicate"
     ]
 
 testConst :: Const Int Char -> Bool
-testConst x@(Const c) = eval x () == T 0 c
+testConst x@(Const c) = apply x () == T 0 c
 
 testFail :: Fail Int Char -> Bool
-testFail x@(Fail c) = eval x () == F c
+testFail x@(Fail c) = apply x () == F c
 
 testAnd :: Rand -> Rand -> Bool
-testAnd a@(Rand (T d x)) b@(Rand (T w y)) = eval (a :&: b) () == T (d + w) (x :*: y)
-testAnd a@(Rand (T _ _)) b@(Rand (F   y)) = eval (a :&: b) () == F y
-testAnd a@(Rand (F   x)) b@(Rand (T _ _)) = eval (a :&: b) () == F x
-testAnd a@(Rand (F   x)) b@(Rand (F   _)) = eval (a :&: b) () == F x
+testAnd a@(Rand (T d x)) b@(Rand (T w y)) = apply (a :&: b) () == T (d + w) (x :*: y)
+testAnd a@(Rand (T _ _)) b@(Rand (F   y)) = apply (a :&: b) () == F y
+testAnd a@(Rand (F   x)) b@(Rand (T _ _)) = apply (a :&: b) () == F x
+testAnd a@(Rand (F   x)) b@(Rand (F   _)) = apply (a :&: b) () == F x
 
 testOr :: Rand -> Rand -> Bool
-testOr a@(Rand (T d x)) b@(Rand (T e y)) = eval (a :||: b) () == if d <= e then T d (Left x) else T e (Right y)
-testOr a@(Rand (T d x)) b@(Rand (F   _)) = eval (a :||: b) () == T d (Left x)
-testOr a@(Rand (F   _)) b@(Rand (T d y)) = eval (a :||: b) () == T d (Right y)
-testOr a@(Rand (F   _)) b@(Rand (F   y)) = eval (a :||: b) () == F y
+testOr a@(Rand (T d x)) b@(Rand (T e y)) = apply (a :||: b) () == if d <= e then T d (Left x) else T e (Right y)
+testOr a@(Rand (T d x)) b@(Rand (F   _)) = apply (a :||: b) () == T d (Left x)
+testOr a@(Rand (F   _)) b@(Rand (T d y)) = apply (a :||: b) () == T d (Right y)
+testOr a@(Rand (F   _)) b@(Rand (F   y)) = apply (a :||: b) () == F y
 
 testOr' :: Rand -> Rand -> Bool
-testOr' a@(Rand (T d x)) b@(Rand (T e y)) = eval (a :|: b) () == if d <= e then T d x else T e y
-testOr' a@(Rand (T d x)) b@(Rand (F   _)) = eval (a :|: b) () == T d x
-testOr' a@(Rand (F   _)) b@(Rand (T d y)) = eval (a :|: b) () == T d y
-testOr' a@(Rand (F   _)) b@(Rand (F   y)) = eval (a :|: b) () == F y
+testOr' a@(Rand (T d x)) b@(Rand (T e y)) = apply (a :|: b) () == if d <= e then T d x else T e y
+testOr' a@(Rand (T d x)) b@(Rand (F   _)) = apply (a :|: b) () == T d x
+testOr' a@(Rand (F   _)) b@(Rand (T d y)) = apply (a :|: b) () == T d y
+testOr' a@(Rand (F   _)) b@(Rand (F   y)) = apply (a :|: b) () == F y
 
 newtype Rand = Rand
   { _rand :: Boolean Int Char
@@ -50,7 +50,7 @@ newtype Rand = Rand
 instance Predicate Rand a where
     type FVal Rand   = Int
     type TVal Rand   = Char
-    apply (Rand x) _ = return x
+    apply (Rand x) _ = x
 
 instance Arbitrary (Boolean Int Char) where
     arbitrary =

@@ -10,7 +10,6 @@ import Data.Attoparsec
 import Data.Attoparsec.Text (double)
 import Data.ByteString (ByteString)
 import Data.Text.Encoding
-import Data.Typeable
 import Snap.Predicate.Parser.Shared
 import qualified Data.Attoparsec.Text as T
 
@@ -19,7 +18,7 @@ data MediaType = MediaType
   , medSubtype :: !ByteString
   , medQuality :: !Double
   , medParams  :: ![(ByteString, ByteString)]
-  } deriving (Eq, Show, Typeable)
+  } deriving (Eq, Show)
 
 parseMediaTypes :: ByteString -> [MediaType]
 parseMediaTypes = either (const []) id . parseOnly mediaTypes

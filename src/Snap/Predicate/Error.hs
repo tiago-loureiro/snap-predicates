@@ -5,7 +5,6 @@ module Snap.Predicate.Error where
 
 import Data.ByteString (ByteString)
 import Data.Predicate.Typeof
-import Data.Typeable
 import Data.Word
 import GHC.Generics
 
@@ -13,7 +12,7 @@ import GHC.Generics
 data Error = Error
     { status  :: !Word               -- ^ (HTTP) status code
     , message :: !(Maybe ByteString) -- ^ optional status message
-    } deriving (Eq, Show, Generic, Typeable)
+    } deriving (Eq, Show, Generic)
 
 instance Typeof Error
 

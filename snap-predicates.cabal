@@ -30,7 +30,6 @@ library
 
     exposed-modules:
         Data.Predicate
-      , Data.Predicate.Env
       , Data.Predicate.Descr
       , Data.Predicate.Typeof
       , Snap.Predicate

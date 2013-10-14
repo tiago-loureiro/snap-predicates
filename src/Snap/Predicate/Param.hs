@@ -23,7 +23,6 @@ import Data.Map (member)
 import Data.Monoid
 import Data.Predicate.Typeof
 import Data.Proxy
-import Data.Typeable
 import Data.Predicate
 import Data.Predicate.Descr hiding (tags)
 import Snap.Core
@@ -54,7 +53,7 @@ parameter :: ByteString
           -> Parameter a
 parameter n r d = Parameter n r d Proxy
 
-instance Typeable a => Predicate (Parameter a) Request where
+instance Predicate (Parameter a) Request where
     type FVal (Parameter a)       = Error
     type TVal (Parameter a)       = a
     apply (Parameter nme f def _) =
@@ -84,7 +83,7 @@ data Param a = Param ByteString (Proxy a)
 param :: ByteString -> Param a
 param n = Param n Proxy
 
-instance (Typeable a, Readable a) => Predicate (Param a) Request where
+instance (Readable a) => Predicate (Param a) Request where
     type FVal (Param a) = Error
     type TVal (Param a) = a
     apply (Param x _)   = apply (parameter x readValues Nothing)
@@ -105,7 +104,7 @@ data ParamDef a = ParamDef ByteString a
 paramDef :: ByteString -> a -> ParamDef a
 paramDef = ParamDef
 
-instance (Typeable a, Readable a) => Predicate (ParamDef a) Request where
+instance (Readable a) => Predicate (ParamDef a) Request where
     type FVal (ParamDef a) = Error
     type TVal (ParamDef a) = a
     apply (ParamDef x d)   = apply (parameter x readValues (Just d))
@@ -127,7 +126,7 @@ data ParamOpt a = ParamOpt ByteString (Proxy a)
 paramOpt :: ByteString -> ParamOpt a
 paramOpt n = ParamOpt n Proxy
 
-instance (Typeable a, Readable a) => Predicate (ParamOpt a) Request where
+instance (Readable a) => Predicate (ParamOpt a) Request where
     type FVal (ParamOpt a) = Error
     type TVal (ParamOpt a) = Maybe a
     apply (ParamOpt x _)   =
@@ -157,7 +156,7 @@ hasParam = HasParam
 instance Predicate HasParam Request where
     type FVal HasParam   = Error
     type TVal HasParam   = ()
-    apply (HasParam x) r = return $
+    apply (HasParam x) r =
         if member x (rqParams r)
             then T 0 ()
             else F (err 400 ("Missing parameter '" <> x <> "'."))

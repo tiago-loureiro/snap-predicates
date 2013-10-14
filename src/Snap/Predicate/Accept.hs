@@ -23,7 +23,6 @@ import Snap.Predicate.Error
 import Snap.Predicate.MediaType
 import Snap.Predicate.MediaType.Internal
 
-import qualified Data.Predicate.Env           as E
 import qualified Snap.Predicate.Parser.Accept as A
 
 -- | A 'Predicate' against the 'Request's \"Accept\" header.
@@ -49,13 +48,12 @@ type2 m = withSing (f m)
 instance (SingI t, SingI s) => Predicate (Accept t s) Request where
     type FVal (Accept t s) = Error
     type TVal (Accept t s) = Media t s
-    apply a r = do
-        mtypes <- E.lookup "accept" >>= maybe (readMediaTypes "accept" r) return
+    apply a r = let mtypes = readMediaTypes "accept" r in
         if null mtypes
-            then return (T 0 (Media (type1 a) (type2 a) 1.0 []))
+            then T 0 (Media (type1 a) (type2 a) 1.0 [])
             else case findMediaType a mtypes of
-               m:_ -> return (T (1.0 - mediaQuality m) m)
-               []  -> return (F (err 406 msg))
+                m:_ -> T (1.0 - mediaQuality m) m
+                []  -> F (err 406 msg)
       where
         msg = "Expected 'Accept: " <> type1 a <> "/" <> type2 a <> "'."
 

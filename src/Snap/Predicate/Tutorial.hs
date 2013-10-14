@@ -51,7 +51,7 @@ or 'Data.Predicate.F'.
 class 'Data.Predicate.Predicate' p a where
     type 'Data.Predicate.FVal' p
     type 'Data.Predicate.TVal' p
-    apply :: p -> a -> 'Control.Monad.State.Strict.State' 'Data.Predicate.Env' (Boolean ('Data.Predicate.FVal' p)) ('Data.Predicate.TVal' p)
+    apply :: p -> a -> Boolean ('Data.Predicate.FVal' p) ('Data.Predicate.TVal' p)
 @
 
 All predicates are instances of this type-class, which does not
@@ -59,14 +59,6 @@ specify the type against which the predicate is evaluated, nor the types
 of actual meta-data for the true/false case of the Boolean returned.
 Snap related predicates are normally defined against 'Snap.Core.Request'
 and in case they fail, they return a status code and an optional message.
-
-Predicates may utilise the stateful 'Data.Predicate.Env.Env' to cache intermediate
-results accross multiple evaluations, i.e. a resource may be declared multiple
-times with different sets of predicates which means that in case a predicate
-is part of more than one set it is evaluated multiple times for the same
-input data. As an optimisation it may be beneficial to store intermediate
-results in 'Data.Predicate.Env.Env' and re-use them later (cf. the implementation
-of 'Snap.Predicate.Accept.Accept').
 
 Besides these type definitions, there are some ways to connect two
 'Data.Predicate.Predicate's to form a new one as the logical @OR@ or the
@@ -76,9 +68,9 @@ logical @AND@ of its parts. These are:
 
   * 'Data.Predicate.:&:' as logical @AND@
 
-Besides evaluating to 'Data.Predicate.T' or 'Data.Predicate.F' depending
-on the truth values of its parts, these connectives also propagate the
-meta-data and 'Data.Predicate.Delta' appropriately.
+In addition to evaluating to 'Data.Predicate.T' or 'Data.Predicate.F'
+depending on the truth values of its parts, these connectives also
+propagate the meta-data and 'Data.Predicate.Delta' appropriately.
 
 If 'Data.Predicate.:&:' evaluates to 'Data.Predicate.T' it has to combine
 the meta-data of both predicates, and it uses the product type
@@ -111,8 +103,8 @@ instance 'Data.Predicate.Predicate' Param 'Snap.Core.Request' where
     type 'Data.Predicate.TVal' Param = ByteString
     apply (Param x) r =
         case params r x of
-            []    -> return (F ('Snap.Predicate.Error' 400 (Just $ \"Expected parameter '\" \<\> x \<\> \"'.\")))
-            (v:_) -> return (T [] v)
+            []    -> F ('Snap.Predicate.Error' 400 (Just $ \"Expected parameter '\" \<\> x \<\> \"'.\"))
+            (v:_) -> T [] v
 @
 
 This is a simple example looking for the existence of a 'Snap.Core.Request' parameter
@@ -136,7 +128,7 @@ One way is to just evaluate them against a given request inside a snap handler, 
 someHandler :: 'Snap.Core.Snap' ()
 someHandler = do
     req <- 'Snap.Core.getRequest'
-    case 'Data.Predicate.eval' ('Snap.Predicate.Accept.accept' 'Data.Predicate.:&:' 'Snap.Predicate.Param.param' \"baz\") req of
+    case 'Data.Predicate.apply ('Snap.Predicate.Accept.accept' 'Data.Predicate.:&:' 'Snap.Predicate.Param.param' \"baz\") req of
         'Data.Predicate.T' ((_ :: 'Snap.Predicate.MediaType.Media' \"text\" \"plain\") 'Data.Predicate.:*:' bazValue) -> ...
         'Data.Predicate.F' (Just ('Snap.Predicate.Error' st msg))                      -> ...
         'Data.Predicate.F' Nothing                                    -> ...

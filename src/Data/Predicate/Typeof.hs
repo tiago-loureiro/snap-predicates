@@ -11,7 +11,8 @@ import Data.Predicate.Descr
 import Data.Proxy
 import GHC.Generics
 
-import Data.Word (Word)
+import Data.Int
+import Data.Word
 import Data.Text (Text)
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as L
@@ -61,6 +62,10 @@ instance (GTypeof f, GTypeof g) => GTypeof (f :+: g) where
             _                -> TSum [s1, s2]
 
 instance Typeof Int where typeof _ = TPrim PInt
+instance Typeof Int8 where typeof _ = TName "Int8"
+instance Typeof Int16 where typeof _ = TName "Int16"
+instance Typeof Int32 where typeof _ = TName "Int32"
+instance Typeof Int64 where typeof _ = TName "Int64"
 instance Typeof Integer where typeof _ = TPrim PInteger
 instance Typeof Bool where typeof _ = TPrim PBool
 instance Typeof Char where typeof _ = TPrim PChar
@@ -71,6 +76,10 @@ instance Typeof Text where typeof _ = TName "Text"
 instance Typeof B.ByteString where typeof _ = TName "ByteString"
 instance Typeof L.ByteString where typeof _ = TName "ByteString"
 instance Typeof Word where typeof _ = TName "Word"
+instance Typeof Word8 where typeof _ = TName "Word8"
+instance Typeof Word16 where typeof _ = TName "Word16"
+instance Typeof Word32 where typeof _ = TName "Word32"
+instance Typeof Word64 where typeof _ = TName "Word64"
 instance (Typeof a) => Typeof (Maybe a)
 instance (Typeof a, Typeof b) => Typeof (Either a b)
 

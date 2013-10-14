@@ -10,7 +10,6 @@ import Data.ByteString (ByteString)
 import Data.Maybe
 import Data.Monoid
 import Data.Predicate.Typeof
-import Data.Typeable
 import GHC.Generics
 import Snap.Util.Readable
 import qualified Data.ByteString.Char8 as C
@@ -27,7 +26,6 @@ newtype CSV a = CSV { list :: [a] } deriving
   , Applicative
   , Alternative
   , Monoid
-  , Typeable
   )
 
 instance Readable a => Readable (CSV a) where

@@ -7,12 +7,8 @@
 module Data.Predicate where
 
 import Prelude hiding (and, or)
-import Control.Applicative hiding (Const)
-import Control.Monad.State.Strict
 import Data.Predicate.Descr
 import Data.Predicate.Typeof
-import Data.Predicate.Env (Env)
-import qualified Data.Predicate.Env as E
 
 -- | 'Delta' is a measure of distance. It is (optionally)
 -- used in predicates that evaluate to 'T' but not uniquely so, i.e.
@@ -43,7 +39,7 @@ data Boolean f t
 class Predicate p a where
     type FVal p
     type TVal p
-    apply :: p -> a -> State Env (Boolean (FVal p) (TVal p))
+    apply :: p -> a -> Boolean (FVal p) (TVal p)
 
 -- | A 'Predicate' instance which always returns 'T' with
 -- the given value as T's meta-data.
@@ -53,7 +49,7 @@ data Const f t where
 instance Predicate (Const f t) a where
     type FVal (Const f t) = f
     type TVal (Const f t) = t
-    apply (Const a) _     = return (T 0 a)
+    apply (Const a) _     = T 0 a
 
 instance Show t => Show (Const f t) where
     show (Const a) = "Const: " ++ show a
@@ -69,7 +65,7 @@ data Fail f t where
 instance Predicate (Fail f t) a where
     type FVal (Fail f t) = f
     type TVal (Fail f t) = t
-    apply (Fail a) _     = return (F a)
+    apply (Fail a) _     = F a
 
 instance Show f => Show (Fail f t) where
     show (Fail a) = "Fail: " ++ show a
@@ -90,7 +86,7 @@ instance (Predicate a c, Predicate b c, TVal a ~ TVal b, FVal a ~ FVal b) => Pre
   where
     type FVal (a :|: b) = FVal a
     type TVal (a :|: b) = TVal a
-    apply (a :|: b) r   = or <$> apply a r <*> apply b r
+    apply (a :|: b) r   = apply a r `or` apply b r
       where
         or x@(T d0 _) y@(T d1 _) = if d1 < d0 then y else x
         or x@(T _  _)   (F    _) = x
@@ -118,7 +114,7 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :||: b)
   where
     type FVal (a :||: b) = FVal a
     type TVal (a :||: b) = TVal a :+: TVal b
-    apply (a :||: b) r   = or <$> apply a r <*> apply b r
+    apply (a :||: b) r   = apply a r `or` apply b r
       where
         or (T d0 t0) (T d1 t1) = if d1 < d0 then T d1 (Right t1) else T d0 (Left t0)
         or (T  d  t) (F     _) = T d (Left t)
@@ -142,7 +138,7 @@ instance (Predicate a c, Predicate b c, FVal a ~ FVal b) => Predicate (a :&: b) 
   where
     type FVal (a :&: b) = FVal a
     type TVal (a :&: b) = TVal a :*: TVal b
-    apply (a :&: b) r   = and <$> apply a r <*> apply b r
+    apply (a :&: b) r   = apply a r `and` apply b r
       where
         and (T d x) (T w y) = T (d + w) (x :*: y)
         and (T _ _) (F   f) = F f
@@ -184,14 +180,9 @@ instance (Show a, Show b) => Show (a :> b) where
 instance (Description a, Description b) => Description (a :> b) where
     describe (a :> b) = DAll (describe a) (describe b)
 
--- | Evaluate the given predicate 'p' against the given value 'a'.
-eval :: Predicate p a => p -> a -> Boolean (FVal p) (TVal p)
-eval p a = evalState (apply p a) E.empty
-
 -- | The 'with' function will invoke the given function only if the predicate 'p'
 -- applied to the test value 'a' evaluates to 'T'.
 with :: (Monad m, Predicate p a) => p -> a -> (TVal p -> m ()) -> m ()
-with p a f =
-    case eval p a of
-        T _ x -> f x
-        _     -> return ()
+with p a f = case apply p a of
+    T _ x -> f x
+    _     -> return ()

@@ -23,7 +23,6 @@ import Data.CaseInsensitive (mk)
 import Data.Maybe
 import Data.Monoid
 import Data.Proxy
-import Data.Typeable
 import Data.Predicate
 import Data.Predicate.Descr hiding (tags)
 import Data.Predicate.Typeof
@@ -55,7 +54,7 @@ header :: ByteString
        -> Header a
 header n r d = Header n r d Proxy
 
-instance Typeable a => Predicate (Header a) Request where
+instance Predicate (Header a) Request where
     type FVal (Header a)       = Error
     type TVal (Header a)       = a
     apply (Header nme f def _) =
@@ -84,7 +83,7 @@ data Hdr a = Hdr ByteString (Proxy a)
 hdr :: ByteString -> Hdr a
 hdr n = Hdr n Proxy
 
-instance (Typeable a, Readable a) => Predicate (Hdr a) Request where
+instance (Readable a) => Predicate (Hdr a) Request where
     type FVal (Hdr a) = Error
     type TVal (Hdr a) = a
     apply (Hdr x _)   = apply (header x readValues Nothing)
@@ -105,7 +104,7 @@ data HdrDef a = HdrDef ByteString a
 hdrDef :: ByteString -> a -> HdrDef a
 hdrDef = HdrDef
 
-instance (Typeable a, Readable a) => Predicate (HdrDef a) Request where
+instance (Readable a) => Predicate (HdrDef a) Request where
     type FVal (HdrDef a) = Error
     type TVal (HdrDef a) = a
     apply (HdrDef x d)   = apply (header x readValues (Just d))
@@ -127,7 +126,7 @@ data HdrOpt a = HdrOpt ByteString (Proxy a)
 hdrOpt :: ByteString -> HdrOpt a
 hdrOpt n = HdrOpt n Proxy
 
-instance (Typeable a, Readable a) => Predicate (HdrOpt a) Request where
+instance (Readable a) => Predicate (HdrOpt a) Request where
     type FVal (HdrOpt a) = Error
     type TVal (HdrOpt a) = Maybe a
     apply (HdrOpt x _)   =
@@ -157,7 +156,7 @@ hasHdr = HasHdr
 instance Predicate HasHdr Request where
     type FVal HasHdr   = Error
     type TVal HasHdr   = ()
-    apply (HasHdr x) r = return $
+    apply (HasHdr x) r =
         if isJust (getHeaders (mk x) r)
             then T 0 ()
             else F (err 400 ("Missing header '" <> x <> "'."))

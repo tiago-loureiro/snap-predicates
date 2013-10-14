@@ -18,7 +18,7 @@ doc = Doc
 instance Predicate Doc b where
     type FVal Doc = ()
     type TVal Doc = ()
-    apply _ _ = return (T 0 ())
+    apply _ _ = T 0 ()
 
 instance Show Doc where
     show (Doc d) = d
