@@ -6,7 +6,7 @@ together with several concrete implementations which are used to
 constrain the set of possible `Snap` handlers in a type-safe
 way.
 
-A module [Snap.Predicates.Tutorial](http://hackage.haskell.org/packages/archive/snap-predicates/latest/doc/html/Snap-Predicates-Tutorial.html)
+A module [Snap.Predicates.Tutorial](http://hackage.haskell.org/packages/archive/snap-predicates/latest/doc/html/Snap-Predicate-Tutorial.html)
 is included, outlining the basic concepts.
 
 Example Usage
@@ -23,14 +23,14 @@ sitemap = do
     head_ "/status" (const $ return ())
 
     get  "/foo" listFoo $
-        Accept Text Plain :&: ParamDef "off" 0 :&: ParamDef "size" 100
+        accept :&: paramDef "off" 0 :&: paramDef "size" 100
 
     post "/foo" createFoo $
-        Accept Text Plain :&: ContentType Application Protobuf
+        accept :&: contentType
 
-listFoo :: MediaType Text Plain :*: Int :*: Int -> Snap ()
+listFoo :: Media "text" "plain" :*: Int :*: Int -> Snap ()
 listFoo (_mt :*: _off :*: _size) = return ()
 
-createFoo :: MediaType Text Plain :*: Content Application Protobuf -> Snap ()
+createFoo :: Media "text" "plain" :*: Content "application" "x-protobuf" -> Snap ()
 createFoo (_mt :*: _ct) = return ()
 ```
