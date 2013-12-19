@@ -6,24 +6,12 @@ type Name = String
 type Tag  = String
 
 data Type
-    = TPrim Prim
+    = Type  Name Type
+    | TDCon Name Type
     | TProd [Type]
     | TRecd [(Name, Type)]
     | TSum  [Type]
     | TName Name
-    | TColl Type
-    | TCon  Name Type
-    | Type  Name Type
-    deriving (Eq, Show)
-
-data Prim
-    = PBool
-    | PInt
-    | PInteger
-    | PFloat
-    | PDouble
-    | PChar
-    | PUnit
     deriving (Eq, Show)
 
 data Obligation

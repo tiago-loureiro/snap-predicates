@@ -1,5 +1,5 @@
 name:                snap-predicates
-version:             0.4
+version:             0.5
 synopsis:            Declarative routing for Snap.
 license:             OtherLicense
 license-file:        mpl-2.0.txt

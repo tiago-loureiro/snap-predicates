@@ -27,7 +27,7 @@ class GTypeof f where
     gtypeof :: f a -> Type
 
 instance GTypeof U1 where
-    gtypeof _ = TPrim PUnit
+    gtypeof _ = TName "()"
 
 instance (Typeof a) => GTypeof (K1 R a) where
     gtypeof _ = typeof (undefined :: a)
@@ -37,7 +37,7 @@ instance (Datatype c, GTypeof f) => GTypeof (D1 c f) where
         Type (datatypeName m1) (gtypeof (undefined :: f a))
 
 instance (Constructor c, GTypeof f) => GTypeof (C1 c f) where
-    gtypeof (m1 :: (C1 c f) a) = TCon (conName m1) (gtypeof (undefined :: f a))
+    gtypeof (m1 :: (C1 c f) a) = TDCon (conName m1) (gtypeof (undefined :: f a))
 
 instance (GTypeof f, GTypeof g) => GTypeof (f :*: g) where
     gtypeof (_ :: (f :*: g) a) =
@@ -61,17 +61,17 @@ instance (GTypeof f, GTypeof g) => GTypeof (f :+: g) where
             (TSum x, TSum y) -> TSum (x <> y)
             _                -> TSum [s1, s2]
 
-instance Typeof Int where typeof _ = TPrim PInt
+instance Typeof Int where typeof _ = TName "Int"
 instance Typeof Int8 where typeof _ = TName "Int8"
 instance Typeof Int16 where typeof _ = TName "Int16"
 instance Typeof Int32 where typeof _ = TName "Int32"
 instance Typeof Int64 where typeof _ = TName "Int64"
-instance Typeof Integer where typeof _ = TPrim PInteger
-instance Typeof Bool where typeof _ = TPrim PBool
-instance Typeof Char where typeof _ = TPrim PChar
-instance Typeof Float where typeof _ = TPrim PFloat
-instance Typeof Double where typeof _ = TPrim PDouble
-instance Typeof () where typeof _ = TPrim PUnit
+instance Typeof Integer where typeof _ = TName "Integer"
+instance Typeof Bool where typeof _ = TName "Bool"
+instance Typeof Char where typeof _ = TName "Char"
+instance Typeof Float where typeof _ = TName "Float"
+instance Typeof Double where typeof _ = TName "Double"
+instance Typeof () where typeof _ = TName "()"
 instance Typeof Text where typeof _ = TName "Text"
 instance Typeof B.ByteString where typeof _ = TName "ByteString"
 instance Typeof L.ByteString where typeof _ = TName "ByteString"
@@ -92,4 +92,4 @@ instance (Typeof a) => Typeof (Proxy a) where
     typeof _ = typeof (undefined :: a)
 
 instance (Typeof a) => Typeof [a] where
-    typeof _ = Type "List" (TColl (typeof (undefined :: a)))
+    typeof _ = Type "List" (typeof (undefined :: a))

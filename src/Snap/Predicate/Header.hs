@@ -165,7 +165,7 @@ instance Show HasHdr where
     show (HasHdr x) = "HasHdr: " ++ show x
 
 instance Description HasHdr where
-    describe (HasHdr n) = DValue (unpack n) (TPrim PUnit) Required tags
+    describe (HasHdr n) = DValue (unpack n) (TName "()") Required tags
 
 tags :: [Tag]
 tags = ["Header"]

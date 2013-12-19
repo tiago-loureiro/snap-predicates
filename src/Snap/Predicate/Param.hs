@@ -165,7 +165,7 @@ instance Show HasParam where
     show (HasParam x) = "HasParam: " ++ show x
 
 instance Description HasParam where
-    describe (HasParam n) = DValue (unpack n) (TPrim PUnit) Required tags
+    describe (HasParam n) = DValue (unpack n) (TName "()") Required tags
 
 tags :: [Tag]
 tags = ["Param"]
