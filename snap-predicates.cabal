@@ -57,6 +57,7 @@ library
       , case-insensitive >= 1.0
       , containers       >= 0.5
       , monads-tf        >= 0.1
+      , singletons       == 0.10.*
       , snap-core        >= 0.9
       , tagged           >= 0.7
       , text             >= 0.11

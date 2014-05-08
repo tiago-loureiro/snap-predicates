@@ -5,7 +5,8 @@ module Snap.Predicate.MediaType where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
-import GHC.TypeLits
+import Data.Singletons
+import Data.Singletons.TypeLits
 
 data Media (t :: Symbol) (s :: Symbol) = Media
     { rawType      :: !ByteString

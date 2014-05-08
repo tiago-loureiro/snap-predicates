@@ -16,12 +16,13 @@ import Data.ByteString.Char8 (pack, unpack)
 import Data.Monoid hiding (All)
 import Data.Predicate
 import Data.Predicate.Descr
-import GHC.TypeLits
 import Data.Maybe
 import Snap.Core hiding (headers)
 import Snap.Predicate.Error
 import Snap.Predicate.MediaType
 import Snap.Predicate.MediaType.Internal
+import Data.Singletons
+import Data.Singletons.TypeLits hiding (Error)
 
 import qualified Snap.Predicate.Parser.Accept as A
 
